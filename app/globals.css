@@ -90,7 +90,7 @@ h1 { margin: 0; font-size: 1.35rem; line-height: 1.15; letter-spacing: -.025em; 
 .leaflet-popup-content-wrapper { border-radius: 0; box-shadow: 0 12px 36px rgb(16 42 67 / 22%); }
 .leaflet-popup-tip { box-shadow: 3px 3px 6px rgb(16 42 67 / 10%); }
 .leaflet-popup-content { margin: 0; width: auto !important; }
-.school-popup { padding: 18px 18px 16px; color: #102a43; }
+.school-popup { position: relative; padding: 18px 18px 16px; color: #102a43; }
 .popup-eyebrow { color: #6a7e8c; font-size: .68rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .school-popup h2 { margin: 5px 0 4px; font-size: 1.08rem; line-height: 1.25; letter-spacing: -.02em; }
 .popup-meta { margin: 0; color: #5d7280; font-size: .77rem; line-height: 1.4; }
@@ -119,6 +119,21 @@ h1 { margin: 0; font-size: 1.35rem; line-height: 1.15; letter-spacing: -.025em; 
 .leaflet-tooltip.zone-tooltip { border-radius: 0; border-color: #d8c39f; box-shadow: 0 5px 18px rgb(16 42 67 / 14%); color: #17384d; }
 .zone-tooltip strong { font-size: .78rem; }
 .zone-tooltip span { color: #657b88; font-size: .68rem; }
+
+@media (min-width: 1100px) {
+  .popup-details[open] .popup-details-content {
+    position: absolute;
+    z-index: 2;
+    top: -18px;
+    left: calc(100% + 16px);
+    width: 350px;
+    max-height: min(520px, calc(100vh - 48px));
+    padding: 18px;
+    border: 1px solid #cbd7dd;
+    background: #ffffff;
+    box-shadow: 0 12px 36px rgb(16 42 67 / 22%);
+  }
+}
 
 @media (max-width: 760px) {
   .map-shell { display: block; min-height: 100svh; }

@@ -44,6 +44,8 @@ type School = {
 };
 
 const BOROUGHS = ['All boroughs', 'Bronx', 'Brooklyn', 'Manhattan', 'Queens', 'Staten Island'];
+const DEFAULT_MAP_CENTER: [number, number] = [40.7128, -74.006];
+const DEFAULT_MAP_ZOOM = 11;
 
 function colorFor(score: number) {
   if (score >= 75) return '#087f5b';
@@ -212,8 +214,8 @@ export default function Home() {
       if (cancelled || !mapElementRef.current) return;
       leafletRef.current = L;
       const map = L.map(mapElementRef.current, {
-        center: [40.7128, -74.006],
-        zoom: 10,
+        center: DEFAULT_MAP_CENTER,
+        zoom: DEFAULT_MAP_ZOOM,
         zoomControl: false,
         preferCanvas: true,
       });
@@ -344,7 +346,7 @@ export default function Home() {
     if ((query || borough !== 'All boroughs') && bounds.length > 0) {
       map.fitBounds(bounds, { padding: [36, 36], maxZoom: bounds.length === 1 ? 14 : 13 });
     } else if (!query && borough === 'All boroughs') {
-      map.setView([40.7128, -74.006], 10);
+      map.setView(DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM);
     }
   }, [borough, filteredSchools, mapReady, query]);
 
