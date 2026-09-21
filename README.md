@@ -23,6 +23,16 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in a browser. Stop the server with `Ctrl+C`.
 
+### Optional CARTO basemap
+
+The map uses OpenStreetMap by default. To enable the quieter CARTO light basemap, request a free key from [CARTO Basemaps](https://carto.com/basemaps/apikey/) and create a local `.env.local` file:
+
+```bash
+NEXT_PUBLIC_CARTO_BASEMAP_KEY=your_key_here
+```
+
+Restart the development server after adding the key. `.env.local` is ignored by Git; restrict the key to your site or local origin in the CARTO dashboard when appropriate.
+
 ## Production build
 
 Build the site:

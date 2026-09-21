@@ -157,14 +157,23 @@ export default function Home() {
         preferCanvas: true,
       });
       L.control.zoom({ position: 'bottomright' }).addTo(map);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
+      const cartoKey = process.env.NEXT_PUBLIC_CARTO_BASEMAP_KEY;
+      const tileUrl = cartoKey
+        ? `https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(cartoKey)}`
+        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+      L.tileLayer(tileUrl, {
+        maxZoom: cartoKey ? 20 : 19,
+        subdomains: cartoKey ? 'abcd' : undefined,
+        attribution: cartoKey
+          ? '&copy; OpenStreetMap contributors &copy; CARTO'
+          : '&copy; OpenStreetMap contributors',
       }).addTo(map);
       map.createPane('districts');
       map.getPane('districts')!.style.zIndex = '310';
       map.createPane('zones');
       map.getPane('zones')!.style.zIndex = '320';
+      map.createPane('schools');
+      map.getPane('schools')!.style.zIndex = '450';
       mapRef.current = map;
       layerRef.current = L.layerGroup().addTo(map);
       setMapReady(true);
@@ -257,11 +266,13 @@ export default function Home() {
     const bounds: [number, number][] = [];
     filteredSchools.forEach((school) => {
       const marker = L.circleMarker([school.lat, school.lng], {
-        radius: 6,
+        pane: 'schools',
+        className: 'school-marker',
+        radius: 6.5,
         color: '#ffffff',
-        weight: 1.5,
+        weight: 2,
         fillColor: colorFor(school.average),
-        fillOpacity: 0.9,
+        fillOpacity: 0.96,
       });
       marker.bindTooltip(school.name, { direction: 'top', offset: [0, -5] });
       marker.bindPopup(popupFor(school), { minWidth: 280, maxWidth: 320 });
