@@ -17,16 +17,28 @@ type School = {
   district: number;
   grades: string;
   enrollment: number;
+  elaTested: number;
+  elaMeanScore: number;
   ela: number;
+  elaLevel4: number;
   elaPctile: number;
+  mathTested: number;
+  mathMeanScore: number;
   math: number;
+  mathLevel4: number;
   mathPctile: number;
   average: number;
   averagePctile: number;
-  swd: string;
-  ell: string;
-  poverty: string;
-  eni: string;
+  asian: number;
+  black: number;
+  hispanic: number;
+  white: number;
+  multiracial: number;
+  nativeAmerican: number;
+  swd: number;
+  ell: number;
+  poverty: number | string;
+  eni: number | string;
   lat: number;
   lng: number;
 };
@@ -50,6 +62,10 @@ function escapeHtml(value: string) {
   })[character] ?? character);
 }
 
+function percent(value: number | string) {
+  return typeof value === 'number' ? `${value.toFixed(1)}%` : escapeHtml(value);
+}
+
 function popupFor(school: School) {
   return `
     <article class="school-popup">
@@ -61,13 +77,58 @@ function popupFor(school: School) {
         <div><strong>${school.math.toFixed(1)}%</strong><span>Math proficient</span></div>
         <div class="score-average"><strong>${school.average.toFixed(1)}%</strong><span>Average proficient</span></div>
       </div>
-      <dl class="detail-grid">
-        <div><dt>NYC percentile</dt><dd>${school.averagePctile.toFixed(1)}</dd></div>
-        <div><dt>Poverty</dt><dd>${escapeHtml(school.poverty)}%</dd></div>
-        <div><dt>Economic need</dt><dd>${escapeHtml(school.eni)}%</dd></div>
-        <div><dt>English learners</dt><dd>${escapeHtml(school.ell)}%</dd></div>
-        <div><dt>Students with disabilities</dt><dd>${escapeHtml(school.swd)}%</dd></div>
-      </dl>
+      <details class="popup-details">
+        <summary>More details</summary>
+        <div class="popup-details-content">
+          <section>
+            <h3>School</h3>
+            <dl class="detail-grid">
+              <div><dt>DBN</dt><dd>${escapeHtml(school.dbn)}</dd></div>
+              <div><dt>District</dt><dd>${school.district}</dd></div>
+              <div><dt>Borough</dt><dd>${escapeHtml(school.borough)}</dd></div>
+              <div><dt>Grades</dt><dd>${escapeHtml(school.grades)}</dd></div>
+              <div><dt>Enrollment</dt><dd>${school.enrollment.toLocaleString()}</dd></div>
+            </dl>
+          </section>
+          <section>
+            <h3>ELA results</h3>
+            <dl class="detail-grid">
+              <div><dt>Students tested</dt><dd>${school.elaTested.toLocaleString()}</dd></div>
+              <div><dt>Mean scale score</dt><dd>${school.elaMeanScore.toFixed(1)}</dd></div>
+              <div><dt>Proficient</dt><dd>${school.ela.toFixed(1)}%</dd></div>
+              <div><dt>Level 4</dt><dd>${school.elaLevel4.toFixed(1)}%</dd></div>
+              <div><dt>NYC percentile</dt><dd>${school.elaPctile.toFixed(1)}</dd></div>
+            </dl>
+          </section>
+          <section>
+            <h3>Math results</h3>
+            <dl class="detail-grid">
+              <div><dt>Students tested</dt><dd>${school.mathTested.toLocaleString()}</dd></div>
+              <div><dt>Mean scale score</dt><dd>${school.mathMeanScore.toFixed(1)}</dd></div>
+              <div><dt>Proficient</dt><dd>${school.math.toFixed(1)}%</dd></div>
+              <div><dt>Level 4</dt><dd>${school.mathLevel4.toFixed(1)}%</dd></div>
+              <div><dt>NYC percentile</dt><dd>${school.mathPctile.toFixed(1)}</dd></div>
+              <div><dt>Average proficient</dt><dd>${school.average.toFixed(1)}%</dd></div>
+              <div><dt>Average NYC percentile</dt><dd>${school.averagePctile.toFixed(1)}</dd></div>
+            </dl>
+          </section>
+          <section>
+            <h3>Student demographics</h3>
+            <dl class="detail-grid">
+              <div><dt>Asian and Pacific Islander</dt><dd>${school.asian.toFixed(1)}%</dd></div>
+              <div><dt>Black</dt><dd>${school.black.toFixed(1)}%</dd></div>
+              <div><dt>Hispanic</dt><dd>${school.hispanic.toFixed(1)}%</dd></div>
+              <div><dt>White</dt><dd>${school.white.toFixed(1)}%</dd></div>
+              <div><dt>Multi-Racial</dt><dd>${school.multiracial.toFixed(1)}%</dd></div>
+              <div><dt>Native American</dt><dd>${school.nativeAmerican.toFixed(1)}%</dd></div>
+              <div><dt>Students with disabilities</dt><dd>${school.swd.toFixed(1)}%</dd></div>
+              <div><dt>English language learners</dt><dd>${school.ell.toFixed(1)}%</dd></div>
+              <div><dt>Poverty</dt><dd>${percent(school.poverty)}</dd></div>
+              <div><dt>Economic need index</dt><dd>${percent(school.eni)}</dd></div>
+            </dl>
+          </section>
+        </div>
+      </details>
     </article>`;
 }
 
@@ -275,7 +336,7 @@ export default function Home() {
         fillOpacity: 0.96,
       });
       marker.bindTooltip(school.name, { direction: 'top', offset: [0, -5] });
-      marker.bindPopup(popupFor(school), { minWidth: 280, maxWidth: 320 });
+      marker.bindPopup(popupFor(school), { minWidth: 300, maxWidth: 360, maxHeight: 520 });
       marker.addTo(layer);
       bounds.push([school.lat, school.lng]);
     });

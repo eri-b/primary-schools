@@ -100,8 +100,18 @@ h1 { margin: 0; font-size: 1.35rem; line-height: 1.15; letter-spacing: -.025em; 
 .score-grid strong { font-size: 1.15rem; line-height: 1.1; }
 .score-grid span { margin-top: 3px; color: #607784; font-size: .67rem; }
 .score-grid .score-average span { color: #c9d8df; }
+.popup-details { margin-top: 13px; border-top: 1px solid #dbe4e8; }
+.popup-details summary { display: flex; min-height: 40px; align-items: center; justify-content: space-between; color: #17384d; font-size: .82rem; font-weight: 750; cursor: pointer; list-style: none; }
+.popup-details summary::-webkit-details-marker { display: none; }
+.popup-details summary::after { color: #667d89; font-size: 1rem; content: '+'; }
+.popup-details[open] summary::after { content: '−'; }
+.popup-details summary:focus-visible { outline: 3px solid rgb(227 154 34 / 45%); outline-offset: 2px; }
+.popup-details-content { max-height: 290px; padding-right: 5px; overflow-y: auto; scrollbar-gutter: stable; }
+.popup-details section { padding: 12px 0 4px; border-top: 1px solid #e1e8eb; }
+.popup-details section:first-child { padding-top: 2px; border-top: 0; }
+.popup-details h3 { margin: 0 0 8px; color: #29475b; font-size: .72rem; letter-spacing: .055em; text-transform: uppercase; }
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 13px; margin: 14px 0 0; }
-.detail-grid div:first-child { grid-column: 1 / -1; padding-bottom: 7px; border-bottom: 1px solid #e1e8eb; }
+.popup-details .detail-grid { margin-top: 0; }
 .detail-grid dt { color: #72858f; font-size: .66rem; }
 .detail-grid dd { margin: 2px 0 0; font-size: .82rem; font-weight: 700; }
 .leaflet-tooltip.district-label { padding: 2px 4px; border: 0; background: rgb(255 255 255 / 72%); box-shadow: none; color: #29475b; font-size: .66rem; font-weight: 800; }
