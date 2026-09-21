@@ -40,5 +40,6 @@ npm run start
 ## Data and maps
 
 - School statistics are stored in `public/schools.json`.
+- The original comparison dataset is kept in `data/NYC_Public_Elementary_School_Comparison_2025-26.csv`.
 - The basemap uses OpenStreetMap tiles, so an internet connection is needed to display the map background.
 - School locations come from NYC Open Data. Performance and demographic statistics come from NYC Public Schools.
