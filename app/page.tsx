@@ -39,8 +39,28 @@ type School = {
   ell: number;
   poverty: number | string;
   eni: number | string;
+  details: {
+    gradeEnrollment: { grade: string; count: number }[];
+    gender: CountShare[];
+    race: CountShare[];
+    programs: CountShare[];
+    elaLevels: TestLevel[];
+    mathLevels: TestLevel[];
+  };
   lat: number;
   lng: number;
+};
+
+type CountShare = {
+  label: string;
+  count: number | null;
+  percent: number | string | null;
+};
+
+type TestLevel = {
+  level: number;
+  count: number | null;
+  percent: number | null;
 };
 
 const BOROUGHS = [
@@ -84,7 +104,45 @@ function metric(value: number | null, suffix = '') {
   return value === null ? 'Suppressed' : `${value.toFixed(1)}${suffix}`;
 }
 
+function compactCount(value: number | null) {
+  return value === null ? '—' : value.toLocaleString();
+}
+
+function compactPercent(value: number | string | null) {
+  if (value === null) return '—';
+  return typeof value === 'number' ? `${value.toFixed(1)}%` : escapeHtml(value);
+}
+
+function compactRows(rows: CountShare[]) {
+  return rows
+    .filter((row) => row.count !== null || row.percent !== null)
+    .map(
+      (row) => `
+        <tr>
+          <th scope="row">${escapeHtml(row.label)}</th>
+          <td>${compactCount(row.count)}</td>
+          <td>${compactPercent(row.percent)}</td>
+        </tr>`,
+    )
+    .join('');
+}
+
+function testLevelRows(levels: TestLevel[]) {
+  return levels
+    .map(
+      (level) => `
+        <tr>
+          <th scope="row">Level ${level.level}</th>
+          <td>${level.count === null ? 'Suppressed' : level.count.toLocaleString()}</td>
+          <td>${metric(level.percent, '%')}</td>
+        </tr>`,
+    )
+    .join('');
+}
+
 function popupFor(school: School) {
+  const hasSuppressedResults =
+    school.ela === null || school.math === null || school.average === null;
   return `
     <article class="school-popup">
       <div class="popup-eyebrow">${escapeHtml(school.dbn)} · District ${school.district}</div>
@@ -95,6 +153,11 @@ function popupFor(school: School) {
         <div><strong>${metric(school.math, '%')}</strong><span>Math proficient</span></div>
         <div class="score-average"><strong>${metric(school.average, '%')}</strong><span>Average proficient</span></div>
       </div>
+      ${
+        hasSuppressedResults
+          ? '<p class="suppression-note"><strong>Why suppressed?</strong> NYCPS hides outcome values for groups of 5 or fewer tested students—and sometimes another small group—to protect student privacy. Participation totals may still be shown.</p>'
+          : ''
+      }
       <details class="popup-details">
         <summary>More details</summary>
         <div class="popup-details-content">
@@ -145,6 +208,58 @@ function popupFor(school: School) {
               <div><dt>Economic need index</dt><dd>${percent(school.eni)}</dd></div>
             </dl>
           </section>
+          <details class="even-more">
+            <summary>Even more</summary>
+            <div class="even-more-content">
+              <section>
+                <h3>Enrollment by grade</h3>
+                <div class="grade-counts">
+                  ${school.details.gradeEnrollment
+                    .map(
+                      (grade) =>
+                        `<span><b>${escapeHtml(grade.grade)}</b>${grade.count.toLocaleString()}</span>`,
+                    )
+                    .join('')}
+                </div>
+              </section>
+              <section>
+                <h3>ELA score distribution</h3>
+                <table class="compact-table">
+                  <thead><tr><th>Level</th><th>Students</th><th>Share</th></tr></thead>
+                  <tbody>${testLevelRows(school.details.elaLevels)}</tbody>
+                </table>
+              </section>
+              <section>
+                <h3>Math score distribution</h3>
+                <table class="compact-table">
+                  <thead><tr><th>Level</th><th>Students</th><th>Share</th></tr></thead>
+                  <tbody>${testLevelRows(school.details.mathLevels)}</tbody>
+                </table>
+              </section>
+              <section>
+                <h3>Gender</h3>
+                <table class="compact-table">
+                  <thead><tr><th>Group</th><th>Students</th><th>Share</th></tr></thead>
+                  <tbody>${compactRows(school.details.gender)}</tbody>
+                </table>
+              </section>
+              <section>
+                <h3>Race and ethnicity</h3>
+                <table class="compact-table">
+                  <thead><tr><th>Group</th><th>Students</th><th>Share</th></tr></thead>
+                  <tbody>${compactRows(school.details.race)}</tbody>
+                </table>
+              </section>
+              <section>
+                <h3>Student groups</h3>
+                <table class="compact-table">
+                  <thead><tr><th>Group</th><th>Students</th><th>Share</th></tr></thead>
+                  <tbody>${compactRows(school.details.programs)}</tbody>
+                </table>
+                <p class="compact-footnote">Economic need index: ${percent(school.eni)}</p>
+              </section>
+            </div>
+          </details>
         </div>
       </details>
     </article>`;
@@ -246,13 +361,14 @@ export default function Home() {
       const tileUrl = cartoKey
         ? `https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(cartoKey)}`
         : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-      L.tileLayer(tileUrl, {
+      const tileOptions: Leaflet.TileLayerOptions = {
         maxZoom: cartoKey ? 20 : 19,
-        subdomains: cartoKey ? 'abcd' : undefined,
         attribution: cartoKey
           ? '&copy; OpenStreetMap contributors &copy; CARTO'
           : '&copy; OpenStreetMap contributors',
-      }).addTo(map);
+      };
+      if (cartoKey) tileOptions.subdomains = 'abcd';
+      L.tileLayer(tileUrl, tileOptions).addTo(map);
       map.createPane('districts');
       map.getPane('districts')!.style.zIndex = '310';
       map.createPane('zones');

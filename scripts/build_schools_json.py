@@ -193,6 +193,28 @@ def threshold(value):
     return {"Above 95%": ">95%", "Below 5%": "<5%"}.get(value, value)
 
 
+def count(value):
+    return value if is_number(value) else None
+
+
+def share(count_value, percent_value):
+    return {
+        "count": count(count_value),
+        "percent": rounded(percent_value, 100),
+    }
+
+
+def test_levels(row):
+    return [
+        {
+            "level": level,
+            "count": count(row[f"# Level {level}"]),
+            "percent": rounded(row[f"% Level {level}"]),
+        }
+        for level in range(1, 5)
+    ]
+
+
 def grade_span(row):
     grades = [
         ("3K", "Grade 3K"),
@@ -332,6 +354,81 @@ def build(source_dir):
                 "ell": rounded(demographic["% English Language Learners"], 100),
                 "poverty": threshold(demographic["% Poverty"]),
                 "eni": threshold(demographic["Economic Need Index"]),
+                "details": {
+                    "gradeEnrollment": [
+                        {"grade": label, "count": demographic[column] or 0}
+                        for label, column in [
+                            ("3K", "Grade 3K"),
+                            ("PK", "Grade PK (Half Day & Full Day)"),
+                            ("K", "Grade K"),
+                            *[(str(grade), f"Grade {grade}") for grade in range(1, 13)],
+                        ]
+                        if (demographic[column] or 0) > 0
+                    ],
+                    "gender": [
+                        {
+                            "label": "Female",
+                            **share(demographic["# Female"], demographic["% Female"]),
+                        },
+                        {
+                            "label": "Male",
+                            **share(demographic["# Male"], demographic["% Male"]),
+                        },
+                        {
+                            "label": "Neither female nor male",
+                            **share(
+                                demographic["# Neither Female nor Male"],
+                                demographic["% Neither Female nor Male"],
+                            ),
+                        },
+                    ],
+                    "race": [
+                        {
+                            "label": label,
+                            **share(demographic[count_column], demographic[percent_column]),
+                        }
+                        for label, count_column, percent_column in [
+                            (
+                                "Asian and Pacific Islander",
+                                "# Asian and Pacific Islander",
+                                "% Asian and Pacific Islander",
+                            ),
+                            ("Black", "# Black", "% Black"),
+                            ("Hispanic", "# Hispanic", "% Hispanic"),
+                            ("White", "# White", "% White"),
+                            ("Multi-Racial", "# Multi-Racial", "% Multi-Racial"),
+                            ("Native American", "# Native American", "% Native American"),
+                            (
+                                "Missing race/ethnicity",
+                                "# Missing Race/Ethnicity Data",
+                                "% Missing Race/Ethnicity Data",
+                            ),
+                        ]
+                    ],
+                    "programs": [
+                        {
+                            "label": "Students with disabilities",
+                            **share(
+                                demographic["# Students with Disabilities"],
+                                demographic["% Students with Disabilities"],
+                            ),
+                        },
+                        {
+                            "label": "English language learners",
+                            **share(
+                                demographic["# English Language Learners"],
+                                demographic["% English Language Learners"],
+                            ),
+                        },
+                        {
+                            "label": "Students in poverty",
+                            "count": count(demographic["# Poverty"]),
+                            "percent": threshold(demographic["% Poverty"]),
+                        },
+                    ],
+                    "elaLevels": test_levels(ela_row),
+                    "mathLevels": test_levels(math_row),
+                },
             }
         )
 

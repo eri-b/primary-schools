@@ -390,11 +390,23 @@ h1 {
 .score-grid .score-average span {
   color: #c9d8df;
 }
+.suppression-note {
+  margin: 10px 0 0;
+  padding: 8px 9px;
+  background: #f1f4f5;
+  color: #536a77;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+.suppression-note strong {
+  color: #29475b;
+}
 .popup-details {
   margin-top: 13px;
   border-top: 1px solid #dbe4e8;
 }
-.popup-details summary {
+.popup-details > summary,
+.even-more > summary {
   display: flex;
   min-height: 40px;
   align-items: center;
@@ -405,18 +417,22 @@ h1 {
   cursor: pointer;
   list-style: none;
 }
-.popup-details summary::-webkit-details-marker {
+.popup-details > summary::-webkit-details-marker,
+.even-more > summary::-webkit-details-marker {
   display: none;
 }
-.popup-details summary::after {
+.popup-details > summary::after,
+.even-more > summary::after {
   color: #667d89;
   font-size: 1rem;
   content: '+';
 }
-.popup-details[open] summary::after {
+.popup-details[open] > summary::after,
+.even-more[open] > summary::after {
   content: '−';
 }
-.popup-details summary:focus-visible {
+.popup-details > summary:focus-visible,
+.even-more > summary:focus-visible {
   outline: 3px solid rgb(227 154 34 / 45%);
   outline-offset: 2px;
 }
@@ -458,6 +474,73 @@ h1 {
   margin: 2px 0 0;
   font-size: 0.82rem;
   font-weight: 700;
+}
+.even-more {
+  margin-top: 10px;
+  border-top: 1px solid #dbe4e8;
+}
+.even-more > summary {
+  min-height: 36px;
+  font-size: 0.75rem;
+}
+.even-more-content {
+  padding-bottom: 4px;
+}
+.grade-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.grade-counts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  padding-right: 6px;
+  border: 1px solid #dbe4e8;
+  color: #29475b;
+  font-size: 0.7rem;
+}
+.grade-counts b {
+  min-width: 27px;
+  padding: 3px 5px;
+  background: #e7eef1;
+  text-align: center;
+}
+.compact-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.69rem;
+  line-height: 1.25;
+}
+.compact-table th,
+.compact-table td {
+  padding: 3px 5px;
+  border-bottom: 1px solid #e5ebee;
+  text-align: right;
+}
+.compact-table th:first-child {
+  text-align: left;
+}
+.compact-table thead th {
+  color: #70838d;
+  font-size: 0.61rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+.compact-table tbody th {
+  color: #405c6c;
+  font-weight: 600;
+}
+.compact-table tbody td {
+  color: #102a43;
+  font-weight: 700;
+}
+.compact-footnote {
+  margin: 7px 0 0;
+  color: #607784;
+  font-size: 0.67rem;
 }
 .leaflet-tooltip.district-label {
   padding: 2px 4px;
