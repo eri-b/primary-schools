@@ -18,17 +18,17 @@ type School = {
   grades: string;
   enrollment: number;
   elaTested: number;
-  elaMeanScore: number;
-  ela: number;
-  elaLevel4: number;
-  elaPctile: number;
+  elaMeanScore: number | null;
+  ela: number | null;
+  elaLevel4: number | null;
+  elaPctile: number | null;
   mathTested: number;
-  mathMeanScore: number;
-  math: number;
-  mathLevel4: number;
-  mathPctile: number;
-  average: number;
-  averagePctile: number;
+  mathMeanScore: number | null;
+  math: number | null;
+  mathLevel4: number | null;
+  mathPctile: number | null;
+  average: number | null;
+  averagePctile: number | null;
   asian: number;
   black: number;
   hispanic: number;
@@ -43,11 +43,19 @@ type School = {
   lng: number;
 };
 
-const BOROUGHS = ['All boroughs', 'Bronx', 'Brooklyn', 'Manhattan', 'Queens', 'Staten Island'];
+const BOROUGHS = [
+  'All boroughs',
+  'Bronx',
+  'Brooklyn',
+  'Manhattan',
+  'Queens',
+  'Staten Island',
+];
 const DEFAULT_MAP_CENTER: [number, number] = [40.7128, -74.006];
 const DEFAULT_MAP_ZOOM = 11;
 
-function colorFor(score: number) {
+function colorFor(score: number | null) {
+  if (score === null) return '#7b8790';
   if (score >= 75) return '#087f5b';
   if (score >= 55) return '#2f78a8';
   if (score >= 35) return '#e39a22';
@@ -55,17 +63,25 @@ function colorFor(score: number) {
 }
 
 function escapeHtml(value: string) {
-  return value.replace(/[&<>'"]/g, (character) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    "'": '&#039;',
-    '"': '&quot;',
-  })[character] ?? character);
+  return value.replace(
+    /[&<>'"]/g,
+    (character) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#039;',
+        '"': '&quot;',
+      })[character] ?? character,
+  );
 }
 
 function percent(value: number | string) {
   return typeof value === 'number' ? `${value.toFixed(1)}%` : escapeHtml(value);
+}
+
+function metric(value: number | null, suffix = '') {
+  return value === null ? 'Suppressed' : `${value.toFixed(1)}${suffix}`;
 }
 
 function popupFor(school: School) {
@@ -75,9 +91,9 @@ function popupFor(school: School) {
       <h2>${escapeHtml(school.name)}</h2>
       <p class="popup-meta">${escapeHtml(school.borough)} · Grades ${escapeHtml(school.grades)} · ${school.enrollment.toLocaleString()} students</p>
       <div class="score-grid">
-        <div><strong>${school.ela.toFixed(1)}%</strong><span>ELA proficient</span></div>
-        <div><strong>${school.math.toFixed(1)}%</strong><span>Math proficient</span></div>
-        <div class="score-average"><strong>${school.average.toFixed(1)}%</strong><span>Average proficient</span></div>
+        <div><strong>${metric(school.ela, '%')}</strong><span>ELA proficient</span></div>
+        <div><strong>${metric(school.math, '%')}</strong><span>Math proficient</span></div>
+        <div class="score-average"><strong>${metric(school.average, '%')}</strong><span>Average proficient</span></div>
       </div>
       <details class="popup-details">
         <summary>More details</summary>
@@ -96,22 +112,22 @@ function popupFor(school: School) {
             <h3>ELA results</h3>
             <dl class="detail-grid">
               <div><dt>Students tested</dt><dd>${school.elaTested.toLocaleString()}</dd></div>
-              <div><dt>Mean scale score</dt><dd>${school.elaMeanScore.toFixed(1)}</dd></div>
-              <div><dt>Proficient</dt><dd>${school.ela.toFixed(1)}%</dd></div>
-              <div><dt>Level 4</dt><dd>${school.elaLevel4.toFixed(1)}%</dd></div>
-              <div><dt>NYC percentile</dt><dd>${school.elaPctile.toFixed(1)}</dd></div>
+              <div><dt>Mean scale score</dt><dd>${metric(school.elaMeanScore)}</dd></div>
+              <div><dt>Proficient</dt><dd>${metric(school.ela, '%')}</dd></div>
+              <div><dt>Level 4</dt><dd>${metric(school.elaLevel4, '%')}</dd></div>
+              <div><dt>NYC percentile</dt><dd>${metric(school.elaPctile)}</dd></div>
             </dl>
           </section>
           <section>
             <h3>Math results</h3>
             <dl class="detail-grid">
               <div><dt>Students tested</dt><dd>${school.mathTested.toLocaleString()}</dd></div>
-              <div><dt>Mean scale score</dt><dd>${school.mathMeanScore.toFixed(1)}</dd></div>
-              <div><dt>Proficient</dt><dd>${school.math.toFixed(1)}%</dd></div>
-              <div><dt>Level 4</dt><dd>${school.mathLevel4.toFixed(1)}%</dd></div>
-              <div><dt>NYC percentile</dt><dd>${school.mathPctile.toFixed(1)}</dd></div>
-              <div><dt>Average proficient</dt><dd>${school.average.toFixed(1)}%</dd></div>
-              <div><dt>Average NYC percentile</dt><dd>${school.averagePctile.toFixed(1)}</dd></div>
+              <div><dt>Mean scale score</dt><dd>${metric(school.mathMeanScore)}</dd></div>
+              <div><dt>Proficient</dt><dd>${metric(school.math, '%')}</dd></div>
+              <div><dt>Level 4</dt><dd>${metric(school.mathLevel4, '%')}</dd></div>
+              <div><dt>NYC percentile</dt><dd>${metric(school.mathPctile)}</dd></div>
+              <div><dt>Average proficient</dt><dd>${metric(school.average, '%')}</dd></div>
+              <div><dt>Average NYC percentile</dt><dd>${metric(school.averagePctile)}</dd></div>
             </dl>
           </section>
           <section>
@@ -155,8 +171,10 @@ export default function Home() {
   const filteredSchools = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return schools.filter((school) => {
-      const matchesBorough = borough === 'All boroughs' || school.borough === borough;
-      const matchesQuery = !normalizedQuery ||
+      const matchesBorough =
+        borough === 'All boroughs' || school.borough === borough;
+      const matchesQuery =
+        !normalizedQuery ||
         school.name.toLowerCase().includes(normalizedQuery) ||
         school.dbn.toLowerCase().includes(normalizedQuery);
       return matchesBorough && matchesQuery;
@@ -176,7 +194,9 @@ export default function Home() {
       .catch(() => {
         if (!cancelled) setLoadError(true);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -203,7 +223,9 @@ export default function Home() {
       .catch(() => {
         if (!cancelled) setBoundaryError(true);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -291,7 +313,9 @@ export default function Home() {
     zoneLayerRef.current = null;
     if (!showZones || !zones) return;
 
-    const schoolNames = new Map(schools.map((school) => [school.dbn, school.name]));
+    const schoolNames = new Map(
+      schools.map((school) => [school.dbn, school.name]),
+    );
     const zoneLayer = L.geoJSON(zones, {
       pane: 'zones',
       style: {
@@ -338,13 +362,20 @@ export default function Home() {
         fillOpacity: 0.96,
       });
       marker.bindTooltip(school.name, { direction: 'top', offset: [0, -5] });
-      marker.bindPopup(popupFor(school), { minWidth: 300, maxWidth: 360, maxHeight: 520 });
+      marker.bindPopup(popupFor(school), {
+        minWidth: 300,
+        maxWidth: 360,
+        maxHeight: 520,
+      });
       marker.addTo(layer);
       bounds.push([school.lat, school.lng]);
     });
 
     if ((query || borough !== 'All boroughs') && bounds.length > 0) {
-      map.fitBounds(bounds, { padding: [36, 36], maxZoom: bounds.length === 1 ? 14 : 13 });
+      map.fitBounds(bounds, {
+        padding: [36, 36],
+        maxZoom: bounds.length === 1 ? 14 : 13,
+      });
     } else if (!query && borough === 'All boroughs') {
       map.setView(DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM);
     }
@@ -354,14 +385,19 @@ export default function Home() {
     <main className="map-shell">
       <aside className="control-panel">
         <div className="brand-row">
-          <span className="brand-mark" aria-hidden="true"><GraduationCap size={22} strokeWidth={2.2} /></span>
+          <span className="brand-mark" aria-hidden="true">
+            <GraduationCap size={22} strokeWidth={2.2} />
+          </span>
           <div>
             <p className="eyebrow">2025–26 school year</p>
             <h1>NYC elementary schools</h1>
           </div>
         </div>
 
-        <p className="intro">Explore public schools with 2026 state test results. Select a dot for details.</p>
+        <p className="intro">
+          Explore public schools that served tested grades in 2026. Select a dot
+          for details.
+        </p>
 
         <div className="filters" aria-label="Map filters">
           <label htmlFor="school-search">School name or DBN</label>
@@ -378,21 +414,35 @@ export default function Home() {
           </div>
 
           <label htmlFor="borough-filter">Borough</label>
-          <NativeSelect id="borough-filter" className="w-full" value={borough} onChange={(event) => setBorough(event.target.value)}>
-            {BOROUGHS.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}
+          <NativeSelect
+            id="borough-filter"
+            className="w-full"
+            value={borough}
+            onChange={(event) => setBorough(event.target.value)}
+          >
+            {BOROUGHS.map((name) => (
+              <NativeSelectOption key={name} value={name}>
+                {name}
+              </NativeSelectOption>
+            ))}
           </NativeSelect>
         </div>
 
         <div className="result-count" aria-live="polite">
           <MapPin size={17} aria-hidden="true" />
           <strong>{filteredSchools.length.toLocaleString()}</strong>
-          <span>{filteredSchools.length === 1 ? 'school shown' : 'schools shown'}</span>
+          <span>
+            {filteredSchools.length === 1 ? 'school shown' : 'schools shown'}
+          </span>
         </div>
 
         <fieldset className="layer-controls">
           <legend>Boundary layers</legend>
           <label htmlFor="district-layer-toggle">
-            <span><i className="line-key district-key" />School districts</span>
+            <span>
+              <i className="line-key district-key" />
+              School districts
+            </span>
             <input
               id="district-layer-toggle"
               className="layer-toggle"
@@ -406,7 +456,10 @@ export default function Home() {
             />
           </label>
           <label htmlFor="zone-layer-toggle">
-            <span><i className="line-key zone-key" />Elementary zones</span>
+            <span>
+              <i className="line-key zone-key" />
+              Elementary zones
+            </span>
             <input
               id="zone-layer-toggle"
               className="layer-toggle"
@@ -419,28 +472,65 @@ export default function Home() {
               disabled={!zones}
             />
           </label>
-          <p>Districts are administrative areas. Zones give local residents priority at a specific school; Districts 1, 7, and 23 are unzoned choice districts.</p>
-          {boundaryError && <p className="boundary-error">Boundary data could not be loaded.</p>}
+          <p>
+            Districts are administrative areas. Zones give local residents
+            priority at a specific school; Districts 1, 7, and 23 are unzoned
+            choice districts.
+          </p>
+          {boundaryError && (
+            <p className="boundary-error">Boundary data could not be loaded.</p>
+          )}
         </fieldset>
 
         <div className="legend" aria-label="Average proficiency color legend">
           <p>Average proficiency</p>
-          <div><span className="dot high" />75% or more</div>
-          <div><span className="dot upper" />55–74.9%</div>
-          <div><span className="dot middle" />35–54.9%</div>
-          <div><span className="dot lower" />Below 35%</div>
+          <div>
+            <span className="dot high" />
+            75% or more
+          </div>
+          <div>
+            <span className="dot upper" />
+            55–74.9%
+          </div>
+          <div>
+            <span className="dot middle" />
+            35–54.9%
+          </div>
+          <div>
+            <span className="dot lower" />
+            Below 35%
+          </div>
+          <div>
+            <span className="dot unavailable" />
+            Suppressed
+          </div>
         </div>
 
-        <p className="source-note">Performance: NYCPS 2026 ELA &amp; Math results. Demographics: NYCPS 2025–26 snapshot. Locations and boundaries: NYC Open Data. Elementary zones shown are 2024–25 and should be confirmed by address with NYCPS.</p>
+        <p className="source-note">
+          Performance: NYCPS 2026 ELA &amp; Math results. Demographics: NYCPS
+          2025–26 snapshot. Locations and boundaries: NYC Open Data. Elementary
+          zones shown are 2024–25 and should be confirmed by address with NYCPS.
+        </p>
       </aside>
 
       <section className="map-stage" aria-label="Interactive school map">
-        {loadError && <div className="map-message">The school data could not be loaded.</div>}
-        {!loadError && schools.length === 0 && <div className="map-message">Loading schools…</div>}
+        {loadError && (
+          <div className="map-message">
+            The school data could not be loaded.
+          </div>
+        )}
+        {!loadError && schools.length === 0 && (
+          <div className="map-message">Loading schools…</div>
+        )}
         {schools.length > 0 && filteredSchools.length === 0 && (
           <div className="empty-message">No schools match those filters.</div>
         )}
-        <div ref={mapElementRef} className="map-canvas" role="application" aria-label="Map of New York City public elementary schools" />
+        <div
+          ref={mapElementRef}
+          className="map-canvas"
+          role="application"
+          aria-label="Map of New York City public elementary schools"
+        />
       </section>
     </main>
   );
