@@ -115,6 +115,31 @@ h1 {
   font-weight: 750;
   letter-spacing: 0.01em;
 }
+.filter-section {
+  margin: 18px 0 0;
+  padding: 14px;
+  border: 1px solid #cbd7dd;
+  background: #f7f9fa;
+}
+.filter-section legend {
+  padding: 0 6px;
+  color: #102a43;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.filter-grid,
+.filter-control {
+  display: grid;
+  gap: 8px;
+}
+.filter-grid {
+  gap: 12px;
+}
+.filter-control label {
+  margin-top: 0;
+}
 .search-wrap {
   position: relative;
 }
@@ -475,6 +500,16 @@ h1 {
   font-size: 0.82rem;
   font-weight: 700;
 }
+.detail-note {
+  margin: 10px 0 0;
+  color: #607784;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+.detail-note a {
+  color: #176b87;
+  font-weight: 700;
+}
 .even-more {
   margin-top: 10px;
   border-top: 1px solid #dbe4e8;
@@ -614,13 +649,26 @@ h1 {
     display: none;
   }
   .filters {
-    grid-template-columns: 1fr 132px;
-    align-items: end;
-    gap: 8px;
+    gap: 0;
     margin-top: 14px;
   }
-  .filters label {
+  .filters > label,
+  .filter-control label {
     display: none;
+  }
+  .filter-section {
+    margin-top: 10px;
+    padding: 10px;
+  }
+  .filter-section legend {
+    font-size: 0.7rem;
+  }
+  .filter-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .filter-control {
+    min-width: 0;
   }
   .result-count {
     margin-top: 10px;
@@ -653,12 +701,6 @@ h1 {
 }
 
 @media (max-width: 430px) {
-  .filters {
-    grid-template-columns: 1fr;
-  }
-  .filters [data-slot='native-select-wrapper'] {
-    display: none;
-  }
   .layer-controls {
     grid-template-columns: 1fr;
   }

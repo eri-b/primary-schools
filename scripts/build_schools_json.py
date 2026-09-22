@@ -27,12 +27,14 @@ LOCATIONS_URL = (
     "https://services6.arcgis.com/OO2s4OoyCZkYJ6oE/arcgis/rest/services/"
     "NYC_School_Point_Locations/FeatureServer/0/query"
 )
+GIFTED_TALENTED_URL = "https://www.myschools.nyc/en/api/v2/schools/process/8/"
 
 SOURCE_FILENAMES = {
     "demographics": "demographics.xlsx",
     "ela": "ela.xlsx",
     "math": "math.xlsx",
     "locations": "locations.json",
+    "gifted_talented": "gifted_talented.json",
 }
 
 # This new school is in the 2025-26 NYCPS data but not yet in the April 2026
@@ -73,6 +75,29 @@ await pipeline(Readable.fromWeb(response.body), createWriteStream(destination));
     )
 
 
+def download_paginated_json(url, destination):
+    script = """
+import { writeFile } from 'node:fs/promises';
+const [initialUrl, destination] = process.argv.slice(1);
+const results = [];
+let url = initialUrl;
+while (url) {
+  const response = await fetch(url.replace(/^http:/, 'https:'), {
+    headers: { 'User-Agent': 'primary-schools-data-builder/1.0' },
+  });
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
+  const page = await response.json();
+  results.push(...page.results);
+  url = page.next;
+}
+await writeFile(destination, JSON.stringify({ results }));
+"""
+    subprocess.run(
+        ["node", "--input-type=module", "-e", script, url, str(destination)],
+        check=True,
+    )
+
+
 def download_sources(directory):
     directory.mkdir(parents=True, exist_ok=True)
     for key, url in (("demographics", DEMOGRAPHICS_URL), ("ela", ELA_URL), ("math", MATH_URL)):
@@ -90,6 +115,12 @@ def download_sources(directory):
             "returnGeometry": "false",
             "resultRecordCount": 2000,
         },
+    )
+
+    print("Downloading Gifted & Talented programs from MySchools...")
+    download_paginated_json(
+        GIFTED_TALENTED_URL,
+        directory / SOURCE_FILENAMES["gifted_talented"],
     )
 
 
@@ -264,6 +295,26 @@ def load_locations(path):
     return {**locations, **LOCATION_OVERRIDES}
 
 
+def load_gifted_talented(path):
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    programs_by_dbn = {}
+    for directory_school in payload["results"]:
+        dbn = directory_school["school"]["dbn"]
+        programs = directory_school["programs"]
+        if len(programs) != 1:
+            raise ValueError(f"Expected one G&T program for {dbn}, found {len(programs)}")
+        program = programs[0]
+        program_type = program["admissions_method"]["name"]
+        if program_type not in {"District G&T", "Citywide G&T"}:
+            raise ValueError(f"Unexpected G&T program type for {dbn}: {program_type}")
+        programs_by_dbn[dbn] = {
+            "type": program_type,
+            "programCode": program["program"]["code"],
+            "directoryId": directory_school["id"],
+        }
+    return programs_by_dbn
+
+
 def build(source_dir):
     demographics = keyed_rows(
         source_dir / SOURCE_FILENAMES["demographics"],
@@ -281,6 +332,9 @@ def build(source_dir):
         lambda row: row["Year"] == 2026 and row["Grade"] == "All Grades",
     )
     locations = load_locations(source_dir / SOURCE_FILENAMES["locations"])
+    gifted_talented = load_gifted_talented(
+        source_dir / SOURCE_FILENAMES["gifted_talented"]
+    )
 
     dbns = sorted(
         dbn
@@ -354,6 +408,7 @@ def build(source_dir):
                 "ell": rounded(demographic["% English Language Learners"], 100),
                 "poverty": threshold(demographic["% Poverty"]),
                 "eni": threshold(demographic["Economic Need Index"]),
+                "giftedTalented": gifted_talented.get(dbn),
                 "details": {
                     "gradeEnrollment": [
                         {"grade": label, "count": demographic[column] or 0}
@@ -444,7 +499,10 @@ def parse_args():
     parser.add_argument(
         "--source-dir",
         type=Path,
-        help="Use local demographics.xlsx, ela.xlsx, math.xlsx, and locations.json files",
+        help=(
+            "Use local demographics.xlsx, ela.xlsx, math.xlsx, locations.json, "
+            "and gifted_talented.json files"
+        ),
     )
     parser.add_argument("--output", type=Path, default=JSON_PATH)
     return parser.parse_args()

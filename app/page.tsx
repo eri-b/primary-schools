@@ -39,6 +39,11 @@ type School = {
   ell: number;
   poverty: number | string;
   eni: number | string;
+  giftedTalented: {
+    type: 'District G&T' | 'Citywide G&T';
+    programCode: string;
+    directoryId: number;
+  } | null;
   details: {
     gradeEnrollment: { grade: string; count: number }[];
     gender: CountShare[];
@@ -62,6 +67,12 @@ type TestLevel = {
   count: number | null;
   percent: number | null;
 };
+
+type GiftedTalentedFilter =
+  | 'All schools'
+  | 'Any G&T'
+  | 'District G&T'
+  | 'Citywide G&T';
 
 const BOROUGHS = [
   'All boroughs',
@@ -169,7 +180,22 @@ function popupFor(school: School) {
               <div><dt>Borough</dt><dd>${escapeHtml(school.borough)}</dd></div>
               <div><dt>Grades</dt><dd>${escapeHtml(school.grades)}</dd></div>
               <div><dt>Enrollment</dt><dd>${school.enrollment.toLocaleString()}</dd></div>
+              <div><dt>G&amp;T program</dt><dd>${school.giftedTalented ? escapeHtml(school.giftedTalented.type) : 'Not listed'}</dd></div>
+              ${
+                school.giftedTalented
+                  ? `<div><dt>G&amp;T program code</dt><dd>${escapeHtml(school.giftedTalented.programCode)}</dd></div>`
+                  : ''
+              }
             </dl>
+            ${
+              school.giftedTalented
+                ? `<p class="detail-note">${
+                    school.giftedTalented.type === 'Citywide G&T'
+                      ? 'This is a citywide G&amp;T school. Admission requires a G&amp;T application.'
+                      : 'This school offers District G&amp;T classes alongside its general education program. A G&amp;T seat requires a separate G&amp;T application.'
+                  } <a href="https://www.myschools.nyc/en/schools/gt-app/${school.giftedTalented.directoryId}/" target="_blank" rel="noopener noreferrer">See admissions details in MySchools</a>.</p>`
+                : '<p class="detail-note">No G&amp;T program is listed for this school in the 2025–26 MySchools directory.</p>'
+            }
           </section>
           <section>
             <h3>ELA results</h3>
@@ -277,6 +303,7 @@ export default function Home() {
   const [zones, setZones] = useState<GeoJsonObject | null>(null);
   const [query, setQuery] = useState('');
   const [borough, setBorough] = useState('All boroughs');
+  const [gtFilter, setGtFilter] = useState<GiftedTalentedFilter>('All schools');
   const [showDistricts, setShowDistricts] = useState(true);
   const [showZones, setShowZones] = useState(false);
   const [mapReady, setMapReady] = useState(false);
@@ -292,9 +319,13 @@ export default function Home() {
         !normalizedQuery ||
         school.name.toLowerCase().includes(normalizedQuery) ||
         school.dbn.toLowerCase().includes(normalizedQuery);
-      return matchesBorough && matchesQuery;
+      const matchesGt =
+        gtFilter === 'All schools' ||
+        (gtFilter === 'Any G&T' && school.giftedTalented !== null) ||
+        school.giftedTalented?.type === gtFilter;
+      return matchesBorough && matchesQuery && matchesGt;
     });
-  }, [borough, query, schools]);
+  }, [borough, gtFilter, query, schools]);
 
   useEffect(() => {
     let cancelled = false;
@@ -515,7 +546,7 @@ export default function Home() {
           for details.
         </p>
 
-        <div className="filters" aria-label="Map filters">
+        <div className="filters">
           <label htmlFor="school-search">School name or DBN</label>
           <div className="search-wrap">
             <Search size={18} aria-hidden="true" />
@@ -529,19 +560,51 @@ export default function Home() {
             />
           </div>
 
-          <label htmlFor="borough-filter">Borough</label>
-          <NativeSelect
-            id="borough-filter"
-            className="w-full"
-            value={borough}
-            onChange={(event) => setBorough(event.target.value)}
-          >
-            {BOROUGHS.map((name) => (
-              <NativeSelectOption key={name} value={name}>
-                {name}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <fieldset className="filter-section">
+            <legend>Filters</legend>
+            <div className="filter-grid">
+              <div className="filter-control">
+                <label htmlFor="borough-filter">Borough</label>
+                <NativeSelect
+                  id="borough-filter"
+                  className="w-full"
+                  value={borough}
+                  onChange={(event) => setBorough(event.target.value)}
+                >
+                  {BOROUGHS.map((name) => (
+                    <NativeSelectOption key={name} value={name}>
+                      {name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </div>
+
+              <div className="filter-control">
+                <label htmlFor="gt-filter">G&amp;T program</label>
+                <NativeSelect
+                  id="gt-filter"
+                  className="w-full"
+                  value={gtFilter}
+                  onChange={(event) =>
+                    setGtFilter(event.target.value as GiftedTalentedFilter)
+                  }
+                >
+                  <NativeSelectOption value="All schools">
+                    All schools
+                  </NativeSelectOption>
+                  <NativeSelectOption value="Any G&T">
+                    Any G&amp;T program
+                  </NativeSelectOption>
+                  <NativeSelectOption value="District G&T">
+                    District G&amp;T
+                  </NativeSelectOption>
+                  <NativeSelectOption value="Citywide G&T">
+                    Citywide G&amp;T
+                  </NativeSelectOption>
+                </NativeSelect>
+              </div>
+            </div>
+          </fieldset>
         </div>
 
         <div className="result-count" aria-live="polite">
@@ -624,8 +687,9 @@ export default function Home() {
 
         <p className="source-note">
           Performance: NYCPS 2026 ELA &amp; Math results. Demographics: NYCPS
-          2025–26 snapshot. Locations and boundaries: NYC Open Data. Elementary
-          zones shown are 2024–25 and should be confirmed by address with NYCPS.
+          2025–26 snapshot. G&amp;T programs: 2025–26 MySchools directory.
+          Locations and boundaries: NYC Open Data. Elementary zones shown are
+          2024–25 and should be confirmed by address with NYCPS.
         </p>
       </aside>
 
