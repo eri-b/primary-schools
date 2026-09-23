@@ -44,6 +44,26 @@ type School = {
     programCode: string;
     directoryId: number;
   } | null;
+  capacity: {
+    enrollment: number;
+    seats: number;
+    utilization: number;
+    sites: number;
+    reportDate: string;
+  } | null;
+  kindergarten: {
+    directoryId: number;
+    directoryYear: string;
+    programs: {
+      name: string;
+      code: string;
+      method: string;
+      seatsLastYear: number | null;
+      applicantsLastYear: number | null;
+      filledLastYear: boolean | null;
+      priorities: { name: string; result: string }[];
+    }[];
+  } | null;
   details: {
     gradeEnrollment: { grade: string; count: number }[];
     gender: CountShare[];
@@ -151,6 +171,28 @@ function testLevelRows(levels: TestLevel[]) {
     .join('');
 }
 
+function kindergartenDetails(school: School) {
+  if (!school.kindergarten) {
+    return '<p class="detail-note">No kindergarten program is listed for this school in the available MySchools directory.</p>';
+  }
+  return school.kindergarten.programs.map((program) => `
+    <div class="admissions-program">
+      <h4>${escapeHtml(program.name)}</h4>
+      <dl class="detail-grid">
+        <div><dt>Admissions method</dt><dd>${escapeHtml(program.method)}</dd></div>
+        <div><dt>Program code</dt><dd>${escapeHtml(program.code)}</dd></div>
+        <div><dt>Seats last year</dt><dd>${compactCount(program.seatsLastYear)}</dd></div>
+        <div><dt>Applicants last year</dt><dd>${compactCount(program.applicantsLastYear)}</dd></div>
+      </dl>
+      ${program.filledLastYear === null ? '' : `<p class="detail-note">${program.filledLastYear ? 'All listed seats filled last year.' : 'Not all listed seats filled last year.'}</p>`}
+      <details class="priority-details">
+        <summary>Priorities and last year’s offers</summary>
+        <ol>${program.priorities.map((priority) => `<li><strong>${escapeHtml(priority.name)}</strong><span>${escapeHtml(priority.result)}</span></li>`).join('')}</ol>
+      </details>
+    </div>
+  `).join('');
+}
+
 function popupFor(school: School) {
   const hasSuppressedResults =
     school.ela === null || school.math === null || school.average === null;
@@ -172,6 +214,16 @@ function popupFor(school: School) {
       <details class="popup-details">
         <summary>More details</summary>
         <div class="popup-details-content">
+          <div class="popup-tabs">
+            <input class="tab-school" type="radio" name="tabs-${escapeHtml(school.dbn)}" id="school-${escapeHtml(school.dbn)}" checked>
+            <label for="school-${escapeHtml(school.dbn)}">School</label>
+            <input class="tab-admissions" type="radio" name="tabs-${escapeHtml(school.dbn)}" id="admissions-${escapeHtml(school.dbn)}">
+            <label for="admissions-${escapeHtml(school.dbn)}">Admissions</label>
+            <input class="tab-results" type="radio" name="tabs-${escapeHtml(school.dbn)}" id="results-${escapeHtml(school.dbn)}">
+            <label for="results-${escapeHtml(school.dbn)}">Results</label>
+            <input class="tab-students" type="radio" name="tabs-${escapeHtml(school.dbn)}" id="students-${escapeHtml(school.dbn)}">
+            <label for="students-${escapeHtml(school.dbn)}">Students</label>
+            <div class="popup-panel panel-school">
           <section>
             <h3>School</h3>
             <dl class="detail-grid">
@@ -197,6 +249,25 @@ function popupFor(school: School) {
                 : '<p class="detail-note">No G&amp;T program is listed for this school in the 2025–26 MySchools directory.</p>'
             }
           </section>
+            </div>
+            <div class="popup-panel panel-admissions">
+              <section>
+                <h3>School capacity</h3>
+                ${school.capacity ? `<dl class="detail-grid">
+                  <div><dt>Reported enrollment</dt><dd>${school.capacity.enrollment.toLocaleString()}</dd></div>
+                  <div><dt>Estimated capacity</dt><dd>${school.capacity.seats.toLocaleString()}</dd></div>
+                  <div><dt>Utilization</dt><dd>${school.capacity.utilization}%</dd></div>
+                  <div><dt>Reported sites</dt><dd>${school.capacity.sites}</dd></div>
+                </dl><p class="detail-note">NYC School Construction Authority report dated ${escapeHtml(school.capacity.reportDate)}. This is schoolwide space utilization, not available kindergarten seats. <a href="https://data.cityofnewyork.us/Education/Enrollment-Capacity-And-Utilization-Reports/gkd7-3vk7" target="_blank" rel="noopener noreferrer">Source</a></p>` : '<p class="detail-note">Capacity is unavailable in the current city report.</p>'}
+              </section>
+              <section>
+                <h3>Kindergarten demand</h3>
+                ${kindergartenDetails(school)}
+                <p class="detail-note">These are prior-year figures from the ${school.kindergarten ? escapeHtml(school.kindergarten.directoryYear) : 'available'} MySchools directory, not current openings. Counts shown are for general education where reported. <a href="${school.kindergarten ? `https://www.myschools.nyc/en/schools/kindergarten/${school.kindergarten.directoryId}/` : 'https://www.myschools.nyc/'}" target="_blank" rel="noopener noreferrer">Check MySchools for current admissions and waitlists</a>.</p>
+                <p class="detail-note">Offers follow your ranked choices and each program’s priority groups. Random numbers break ties when a group has more applicants than seats. If a seat opens after offers, the program can make a waitlist offer. <a href="https://www.schools.nyc.gov/enrollment/enroll-grade-by-grade/kindergarten" target="_blank" rel="noopener noreferrer">How kindergarten offers work</a>.</p>
+              </section>
+            </div>
+            <div class="popup-panel panel-results">
           <section>
             <h3>ELA results</h3>
             <dl class="detail-grid">
@@ -219,6 +290,22 @@ function popupFor(school: School) {
               <div><dt>Average NYC percentile</dt><dd>${metric(school.averagePctile)}</dd></div>
             </dl>
           </section>
+              <section>
+                <h3>ELA score distribution</h3>
+                <table class="compact-table">
+                  <thead><tr><th>Level</th><th>Students</th><th>Share</th></tr></thead>
+                  <tbody>${testLevelRows(school.details.elaLevels)}</tbody>
+                </table>
+              </section>
+              <section>
+                <h3>Math score distribution</h3>
+                <table class="compact-table">
+                  <thead><tr><th>Level</th><th>Students</th><th>Share</th></tr></thead>
+                  <tbody>${testLevelRows(school.details.mathLevels)}</tbody>
+                </table>
+              </section>
+            </div>
+            <div class="popup-panel panel-students">
           <section>
             <h3>Student demographics</h3>
             <dl class="detail-grid">
@@ -249,20 +336,6 @@ function popupFor(school: School) {
                 </div>
               </section>
               <section>
-                <h3>ELA score distribution</h3>
-                <table class="compact-table">
-                  <thead><tr><th>Level</th><th>Students</th><th>Share</th></tr></thead>
-                  <tbody>${testLevelRows(school.details.elaLevels)}</tbody>
-                </table>
-              </section>
-              <section>
-                <h3>Math score distribution</h3>
-                <table class="compact-table">
-                  <thead><tr><th>Level</th><th>Students</th><th>Share</th></tr></thead>
-                  <tbody>${testLevelRows(school.details.mathLevels)}</tbody>
-                </table>
-              </section>
-              <section>
                 <h3>Gender</h3>
                 <table class="compact-table">
                   <thead><tr><th>Group</th><th>Students</th><th>Share</th></tr></thead>
@@ -286,6 +359,8 @@ function popupFor(school: School) {
               </section>
             </div>
           </details>
+            </div>
+          </div>
         </div>
       </details>
     </article>`;
@@ -687,7 +762,8 @@ export default function Home() {
 
         <p className="source-note">
           Performance: NYCPS 2026 ELA &amp; Math results. Demographics: NYCPS
-          2025–26 snapshot. G&amp;T programs: 2025–26 MySchools directory.
+          2025–26 snapshot. Admissions: NYC SCA capacity report and 2025–26
+          MySchools directory. G&amp;T programs: 2025–26 MySchools directory.
           Locations and boundaries: NYC Open Data. Elementary zones shown are
           2024–25 and should be confirmed by address with NYCPS.
         </p>

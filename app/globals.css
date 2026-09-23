@@ -467,6 +467,76 @@ h1 {
   overflow-y: auto;
   scrollbar-gutter: stable;
 }
+.popup-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: start;
+  border-bottom: 1px solid #dbe4e8;
+}
+.popup-tabs > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.popup-tabs > label {
+  padding: 9px 2px;
+  border-bottom: 2px solid transparent;
+  color: #607784;
+  font-size: 0.71rem;
+  font-weight: 750;
+  text-align: center;
+  cursor: pointer;
+}
+.popup-tabs > input:checked + label {
+  border-bottom-color: #d07e0e;
+  color: #102a43;
+}
+.popup-tabs > input:focus-visible + label {
+  outline: 3px solid rgb(227 154 34 / 45%);
+  outline-offset: -3px;
+}
+.popup-panel {
+  display: none;
+  grid-column: 1 / -1;
+  padding: 8px 0 12px;
+}
+.popup-tabs:has(.tab-school:checked) .panel-school,
+.popup-tabs:has(.tab-admissions:checked) .panel-admissions,
+.popup-tabs:has(.tab-results:checked) .panel-results,
+.popup-tabs:has(.tab-students:checked) .panel-students {
+  display: block;
+}
+.admissions-program {
+  padding: 9px 0;
+  border-top: 1px solid #e1e8eb;
+}
+.admissions-program:first-of-type {
+  border-top: 0;
+}
+.admissions-program h4 {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+}
+.priority-details {
+  margin-top: 9px;
+  color: #405c6c;
+  font-size: 0.7rem;
+}
+.priority-details summary {
+  font-weight: 750;
+  cursor: pointer;
+}
+.priority-details ol {
+  padding-left: 19px;
+}
+.priority-details li {
+  margin: 8px 0;
+}
+.priority-details li span {
+  display: block;
+  margin-top: 2px;
+}
 .popup-details section {
   padding: 12px 0 4px;
   border-top: 1px solid #e1e8eb;

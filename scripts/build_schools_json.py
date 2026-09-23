@@ -28,6 +28,8 @@ LOCATIONS_URL = (
     "NYC_School_Point_Locations/FeatureServer/0/query"
 )
 GIFTED_TALENTED_URL = "https://www.myschools.nyc/en/api/v2/schools/process/8/"
+KINDERGARTEN_URL = "https://www.myschools.nyc/en/api/v2/schools/process/4/"
+CAPACITY_URL = "https://data.cityofnewyork.us/resource/gkd7-3vk7.json"
 
 SOURCE_FILENAMES = {
     "demographics": "demographics.xlsx",
@@ -35,6 +37,8 @@ SOURCE_FILENAMES = {
     "math": "math.xlsx",
     "locations": "locations.json",
     "gifted_talented": "gifted_talented.json",
+    "kindergarten": "kindergarten.json",
+    "capacity": "capacity.json",
 }
 
 # This new school is in the 2025-26 NYCPS data but not yet in the April 2026
@@ -121,6 +125,27 @@ def download_sources(directory):
     download_paginated_json(
         GIFTED_TALENTED_URL,
         directory / SOURCE_FILENAMES["gifted_talented"],
+    )
+    print("Downloading kindergarten admissions data from MySchools...")
+    download_paginated_json(
+        KINDERGARTEN_URL,
+        directory / SOURCE_FILENAMES["kindergarten"],
+    )
+    print("Downloading the latest capacity report from NYC Open Data...")
+    script = """
+import { writeFile } from 'node:fs/promises';
+const [base, destination] = process.argv.slice(1);
+const latest = await (await fetch(`${base}?$select=max(data_as_of)%20as%20date`)).json();
+const date = latest[0].date;
+const url = `${base}?${new URLSearchParams({$where: `data_as_of='${date}'`, $limit: '10000'})}`;
+const response = await fetch(url);
+if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
+await writeFile(destination, JSON.stringify(await response.json()));
+"""
+    subprocess.run(
+        ["node", "--input-type=module", "-e", script, CAPACITY_URL,
+         str(directory / SOURCE_FILENAMES["capacity"])],
+        check=True,
     )
 
 
@@ -315,6 +340,65 @@ def load_gifted_talented(path):
     return programs_by_dbn
 
 
+def load_capacity(path):
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    by_organization = {}
+    for row in rows:
+        organization = row.get("org_id")
+        if not organization or not organization[1:].isdigit():
+            continue
+        by_organization.setdefault(organization, []).append(row)
+
+    capacity = {}
+    for organization, sites in by_organization.items():
+        try:
+            enrollment = sum(int(site["org_enroll"]) for site in sites)
+            seats = sum(int(site["org_target_cap"]) for site in sites)
+        except (KeyError, TypeError, ValueError):
+            continue
+        if seats <= 0:
+            continue
+        capacity[organization] = {
+            "enrollment": enrollment,
+            "seats": seats,
+            "utilization": round(100 * enrollment / seats),
+            "sites": len(sites),
+            "reportDate": max(site["data_as_of"][:10] for site in sites),
+        }
+    return capacity
+
+
+def load_kindergarten(path):
+    directory = json.loads(path.read_text(encoding="utf-8"))
+    admissions = {}
+    for school in directory["results"]:
+        programs = []
+        for program in school["programs"]:
+            demand = program.get("demand_last_year") or {}
+            general = demand.get("general_education") or {}
+            programs.append({
+                "name": program["name"],
+                "code": program["program"]["code"],
+                "method": program["admissions_method"]["name"],
+                "seatsLastYear": general.get("seats"),
+                "applicantsLastYear": general.get("applicants"),
+                "filledLastYear": general.get("all_seats_filled"),
+                "priorities": [
+                    {
+                        "name": group["name"],
+                        "result": group.get("ge_priority_group_description") or "",
+                    }
+                    for group in program.get("program_priority_groups", [])
+                ],
+            })
+        admissions[school["school"]["dbn"]] = {
+            "directoryId": school["id"],
+            "directoryYear": school["school"].get("school_year", ""),
+            "programs": programs,
+        }
+    return admissions
+
+
 def build(source_dir):
     demographics = keyed_rows(
         source_dir / SOURCE_FILENAMES["demographics"],
@@ -335,6 +419,8 @@ def build(source_dir):
     gifted_talented = load_gifted_talented(
         source_dir / SOURCE_FILENAMES["gifted_talented"]
     )
+    capacity = load_capacity(source_dir / SOURCE_FILENAMES["capacity"])
+    kindergarten = load_kindergarten(source_dir / SOURCE_FILENAMES["kindergarten"])
 
     dbns = sorted(
         dbn
@@ -409,6 +495,8 @@ def build(source_dir):
                 "poverty": threshold(demographic["% Poverty"]),
                 "eni": threshold(demographic["Economic Need Index"]),
                 "giftedTalented": gifted_talented.get(dbn),
+                "capacity": capacity.get(dbn[2:]),
+                "kindergarten": kindergarten.get(dbn),
                 "details": {
                     "gradeEnrollment": [
                         {"grade": label, "count": demographic[column] or 0}
@@ -501,7 +589,7 @@ def parse_args():
         type=Path,
         help=(
             "Use local demographics.xlsx, ela.xlsx, math.xlsx, locations.json, "
-            "and gifted_talented.json files"
+            "gifted_talented.json, kindergarten.json, and capacity.json files"
         ),
     )
     parser.add_argument("--output", type=Path, default=JSON_PATH)
