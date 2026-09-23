@@ -21,7 +21,7 @@ Start the development server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in a browser. Stop the server with `Ctrl+C`.
+Open [http://localhost:3000/elementary](http://localhost:3000/elementary) in a browser. Visiting `/` redirects there. Stop the server with `Ctrl+C`.
 
 ### Optional CARTO basemap
 
