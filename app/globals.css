@@ -97,7 +97,7 @@ select {
 }
 h1 {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   line-height: 1.15;
   letter-spacing: -0.025em;
 }
@@ -535,6 +535,55 @@ h1 {
 .popup-tabs:has(.tab-admissions:checked) .panel-admissions,
 .popup-tabs:has(.tab-results:checked) .panel-results,
 .popup-tabs:has(.tab-students:checked) .panel-students {
+  display: block;
+}
+.admissions-grade {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.admissions-grade legend {
+  margin-bottom: 7px;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+.admissions-grade > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.admissions-grade > label {
+  padding: 5px 9px;
+  border: 1px solid #cbd8de;
+  border-radius: 4px;
+  color: #405c6c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.admissions-grade > input:checked + label {
+  border-color: #d07e0e;
+  background: #fff4dd;
+  color: #102a43;
+}
+.admissions-grade > input:focus-visible + label {
+  outline: 3px solid rgb(227 154 34 / 45%);
+  outline-offset: 2px;
+}
+.admissions-grade-panel {
+  display: none;
+  flex-basis: 100%;
+  min-width: 0;
+  padding-top: 10px;
+}
+.admissions-grade:has(.grade-k:checked) .grade-panel-kindergarten,
+.admissions-grade:has(.grade-pre-k:checked) .grade-panel-pre-k,
+.admissions-grade:has(.grade-3k:checked) .grade-panel-3k {
   display: block;
 }
 .admissions-program {

@@ -28,6 +28,8 @@ LOCATIONS_URL = (
     "NYC_School_Point_Locations/FeatureServer/0/query"
 )
 GIFTED_TALENTED_URL = "https://www.myschools.nyc/en/api/v2/schools/process/8/"
+THREE_K_URL = "https://www.myschools.nyc/en/api/v2/schools/process/2/"
+PRE_K_URL = "https://www.myschools.nyc/en/api/v2/schools/process/5/"
 KINDERGARTEN_URL = "https://www.myschools.nyc/en/api/v2/schools/process/4/"
 CAPACITY_URL = "https://data.cityofnewyork.us/resource/gkd7-3vk7.json"
 
@@ -37,6 +39,8 @@ SOURCE_FILENAMES = {
     "math": "math.xlsx",
     "locations": "locations.json",
     "gifted_talented": "gifted_talented.json",
+    "three_k": "three_k.json",
+    "pre_k": "pre_k.json",
     "kindergarten": "kindergarten.json",
     "capacity": "capacity.json",
 }
@@ -83,17 +87,29 @@ def download_paginated_json(url, destination):
     script = """
 import { writeFile } from 'node:fs/promises';
 const [initialUrl, destination] = process.argv.slice(1);
-const results = [];
-let url = initialUrl;
-while (url) {
+async function getPage(url) {
   const response = await fetch(url.replace(/^http:/, 'https:'), {
     headers: { 'User-Agent': 'primary-schools-data-builder/1.0' },
   });
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
-  const page = await response.json();
-  results.push(...page.results);
-  url = page.next;
+  return response.json();
 }
+const first = await getPage(initialUrl);
+const results = [...first.results];
+if (first.next) {
+  const pageCount = Math.ceil(first.count / first.results.length);
+  for (let start = 2; start <= pageCount; start += 5) {
+    const batch = await Promise.all(
+      Array.from({ length: Math.min(5, pageCount - start + 1) }, (_, offset) => {
+        const url = new URL(first.next);
+        url.searchParams.set('page', String(start + offset));
+        return getPage(url.href);
+      }),
+    );
+    for (const page of batch) results.push(...page.results);
+  }
+}
+if (results.length !== first.count) throw new Error(`Expected ${first.count} records; got ${results.length}`);
 await writeFile(destination, JSON.stringify({ results }));
 """
     subprocess.run(
@@ -126,6 +142,15 @@ def download_sources(directory):
         GIFTED_TALENTED_URL,
         directory / SOURCE_FILENAMES["gifted_talented"],
     )
+    for name, key, url in (
+        ("3-K", "three_k", THREE_K_URL),
+        ("pre-K", "pre_k", PRE_K_URL),
+    ):
+        print(f"Downloading {name} admissions data from MySchools...")
+        download_paginated_json(
+            url,
+            directory / SOURCE_FILENAMES[key],
+        )
     print("Downloading kindergarten admissions data from MySchools...")
     download_paginated_json(
         KINDERGARTEN_URL,
@@ -368,7 +393,7 @@ def load_capacity(path):
     return capacity
 
 
-def load_kindergarten(path):
+def load_admissions(path):
     directory = json.loads(path.read_text(encoding="utf-8"))
     admissions = {}
     for school in directory["results"]:
@@ -420,7 +445,9 @@ def build(source_dir):
         source_dir / SOURCE_FILENAMES["gifted_talented"]
     )
     capacity = load_capacity(source_dir / SOURCE_FILENAMES["capacity"])
-    kindergarten = load_kindergarten(source_dir / SOURCE_FILENAMES["kindergarten"])
+    three_k = load_admissions(source_dir / SOURCE_FILENAMES["three_k"])
+    pre_k = load_admissions(source_dir / SOURCE_FILENAMES["pre_k"])
+    kindergarten = load_admissions(source_dir / SOURCE_FILENAMES["kindergarten"])
 
     dbns = sorted(
         dbn
@@ -496,6 +523,8 @@ def build(source_dir):
                 "eni": threshold(demographic["Economic Need Index"]),
                 "giftedTalented": gifted_talented.get(dbn),
                 "capacity": capacity.get(dbn[2:]),
+                "threeK": three_k.get(dbn),
+                "preK": pre_k.get(dbn),
                 "kindergarten": kindergarten.get(dbn),
                 "details": {
                     "gradeEnrollment": [
@@ -589,7 +618,8 @@ def parse_args():
         type=Path,
         help=(
             "Use local demographics.xlsx, ela.xlsx, math.xlsx, locations.json, "
-            "gifted_talented.json, kindergarten.json, and capacity.json files"
+            "gifted_talented.json, three_k.json, pre_k.json, "
+            "kindergarten.json, and capacity.json files"
         ),
     )
     parser.add_argument("--output", type=Path, default=JSON_PATH)

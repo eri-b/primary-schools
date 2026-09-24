@@ -51,19 +51,9 @@ type School = {
     sites: number;
     reportDate: string;
   } | null;
-  kindergarten: {
-    directoryId: number;
-    directoryYear: string;
-    programs: {
-      name: string;
-      code: string;
-      method: string;
-      seatsLastYear: number | null;
-      applicantsLastYear: number | null;
-      filledLastYear: boolean | null;
-      priorities: { name: string; result: string }[];
-    }[];
-  } | null;
+  threeK: AdmissionsDirectory | null;
+  preK: AdmissionsDirectory | null;
+  kindergarten: AdmissionsDirectory | null;
   details: {
     gradeEnrollment: { grade: string; count: number }[];
     gender: CountShare[];
@@ -74,6 +64,20 @@ type School = {
   };
   lat: number;
   lng: number;
+};
+
+type AdmissionsDirectory = {
+  directoryId: number;
+  directoryYear: string;
+  programs: {
+    name: string;
+    code: string;
+    method: string;
+    seatsLastYear: number | null;
+    applicantsLastYear: number | null;
+    filledLastYear: boolean | null;
+    priorities: { name: string; result: string }[];
+  }[];
 };
 
 type CountShare = {
@@ -171,11 +175,11 @@ function testLevelRows(levels: TestLevel[]) {
     .join('');
 }
 
-function kindergartenDetails(school: School) {
-  if (!school.kindergarten) {
-    return '<p class="detail-note">No kindergarten program is listed for this school in the available MySchools directory.</p>';
+function admissionsDetails(directory: AdmissionsDirectory | null, grade: string) {
+  if (!directory) {
+    return `<p class="detail-note">No ${grade} program is listed for this school in the available MySchools directory.</p>`;
   }
-  return school.kindergarten.programs.map((program) => `
+  return directory.programs.map((program) => `
     <div class="admissions-program">
       <h4>${escapeHtml(program.name)}</h4>
       <dl class="detail-grid">
@@ -191,6 +195,19 @@ function kindergartenDetails(school: School) {
       </details>
     </div>
   `).join('');
+}
+
+function admissionsGrade(school: School, grade: '3-K' | 'pre-K' | 'kindergarten') {
+  const directory = grade === '3-K' ? school.threeK : grade === 'pre-K' ? school.preK : school.kindergarten;
+  const path = grade === '3-K' ? '3k' : grade === 'pre-K' ? 'pre-k' : 'kindergarten';
+  return `
+    <section class="admissions-grade-panel grade-panel-${path}">
+      <h3>${grade === 'kindergarten' ? 'Kindergarten' : grade} demand</h3>
+      ${admissionsDetails(directory, grade)}
+      <p class="detail-note">These are prior-year figures from the ${directory ? escapeHtml(directory.directoryYear) : 'available'} MySchools directory, not current openings. Counts shown are for general education where reported. <a href="https://www.myschools.nyc/en/schools/${path}/${directory?.directoryId ? `${directory.directoryId}/` : ''}" target="_blank" rel="noopener noreferrer">Check MySchools for current admissions and waitlists</a>.</p>
+      <p class="detail-note">Offers follow your ranked choices and each program’s priority groups. Random numbers break ties when a group has more applicants than seats. If a seat opens after offers, the program can make a waitlist offer. <a href="https://www.schools.nyc.gov/enrollment/enroll-grade-by-grade/${path}" target="_blank" rel="noopener noreferrer">How ${grade} offers work</a>.</p>
+    </section>
+  `;
 }
 
 function popupFor(school: School) {
@@ -258,14 +275,20 @@ function popupFor(school: School) {
                   <div><dt>Estimated capacity</dt><dd>${school.capacity.seats.toLocaleString()}</dd></div>
                   <div><dt>Utilization</dt><dd>${school.capacity.utilization}%</dd></div>
                   <div><dt>Reported sites</dt><dd>${school.capacity.sites}</dd></div>
-                </dl><p class="detail-note">NYC School Construction Authority report dated ${escapeHtml(school.capacity.reportDate)}. This is schoolwide space utilization, not available kindergarten seats. <a href="https://data.cityofnewyork.us/Education/Enrollment-Capacity-And-Utilization-Reports/gkd7-3vk7" target="_blank" rel="noopener noreferrer">Source</a></p>` : '<p class="detail-note">Capacity is unavailable in the current city report.</p>'}
+                </dl><p class="detail-note">NYC School Construction Authority report dated ${escapeHtml(school.capacity.reportDate)}. This is schoolwide space utilization, not available admissions seats. <a href="https://data.cityofnewyork.us/Education/Enrollment-Capacity-And-Utilization-Reports/gkd7-3vk7" target="_blank" rel="noopener noreferrer">Source</a></p>` : '<p class="detail-note">Capacity is unavailable in the current city report.</p>'}
               </section>
-              <section>
-                <h3>Kindergarten demand</h3>
-                ${kindergartenDetails(school)}
-                <p class="detail-note">These are prior-year figures from the ${school.kindergarten ? escapeHtml(school.kindergarten.directoryYear) : 'available'} MySchools directory, not current openings. Counts shown are for general education where reported. <a href="${school.kindergarten ? `https://www.myschools.nyc/en/schools/kindergarten/${school.kindergarten.directoryId}/` : 'https://www.myschools.nyc/'}" target="_blank" rel="noopener noreferrer">Check MySchools for current admissions and waitlists</a>.</p>
-                <p class="detail-note">Offers follow your ranked choices and each program’s priority groups. Random numbers break ties when a group has more applicants than seats. If a seat opens after offers, the program can make a waitlist offer. <a href="https://www.schools.nyc.gov/enrollment/enroll-grade-by-grade/kindergarten" target="_blank" rel="noopener noreferrer">How kindergarten offers work</a>.</p>
-              </section>
+              <fieldset class="admissions-grade">
+                <legend>Admissions grade</legend>
+                <input type="radio" name="admissions-grade-${escapeHtml(school.dbn)}" id="grade-k-${escapeHtml(school.dbn)}" class="grade-k" checked>
+                <label for="grade-k-${escapeHtml(school.dbn)}">Kindergarten</label>
+                <input type="radio" name="admissions-grade-${escapeHtml(school.dbn)}" id="grade-pre-k-${escapeHtml(school.dbn)}" class="grade-pre-k">
+                <label for="grade-pre-k-${escapeHtml(school.dbn)}">Pre-K</label>
+                <input type="radio" name="admissions-grade-${escapeHtml(school.dbn)}" id="grade-3k-${escapeHtml(school.dbn)}" class="grade-3k">
+                <label for="grade-3k-${escapeHtml(school.dbn)}">3-K</label>
+                ${admissionsGrade(school, 'kindergarten')}
+                ${admissionsGrade(school, 'pre-K')}
+                ${admissionsGrade(school, '3-K')}
+              </fieldset>
             </div>
             <div class="popup-panel panel-results">
           <section>
@@ -629,10 +652,7 @@ export default function Home() {
           </div>
         </div>
 
-        <p className="intro">
-          Explore public schools that served tested grades in 2026. Select a dot
-          for details.
-        </p>
+        <p className="intro">Select a dot for school info.</p>
 
         <div className="filters">
           <label htmlFor="school-search">School name or DBN</label>
