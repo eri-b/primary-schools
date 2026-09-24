@@ -373,6 +373,7 @@ export default function Home() {
   const districtLayerRef = useRef<Leaflet.GeoJSON | null>(null);
   const zoneLayerRef = useRef<Leaflet.GeoJSON | null>(null);
   const leafletRef = useRef<typeof Leaflet | null>(null);
+  const lastSearchQueryRef = useRef('');
   const [schools, setSchools] = useState<School[]>([]);
   const [districts, setDistricts] = useState<GeoJsonObject | null>(null);
   const [zones, setZones] = useState<GeoJsonObject | null>(null);
@@ -604,15 +605,16 @@ export default function Home() {
       bounds.push([school.lat, school.lng]);
     });
 
-    if ((query || borough !== 'All boroughs') && bounds.length > 0) {
-      map.fitBounds(bounds, {
-        padding: [36, 36],
-        maxZoom: bounds.length === 1 ? 14 : 13,
-      });
-    } else if (!query && borough === 'All boroughs') {
-      map.setView(DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM);
+    if (schools.length > 0 && query !== lastSearchQueryRef.current) {
+      lastSearchQueryRef.current = query;
+      if (query && bounds.length > 0) {
+        map.fitBounds(bounds, {
+          padding: [36, 36],
+          maxZoom: bounds.length === 1 ? 14 : 13,
+        });
+      }
     }
-  }, [borough, filteredSchools, mapReady, query]);
+  }, [filteredSchools, mapReady, query, schools.length]);
 
   return (
     <main className="map-shell">
