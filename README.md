@@ -1,6 +1,6 @@
-# NYC Elementary School Map
+# Elementary School Maps
 
-An interactive Leaflet map of New York City public elementary schools. It includes school search, borough filtering, performance colors, and clickable school statistics.
+Interactive Leaflet maps of New York City and Westchester County public elementary schools. They include school search, district boundaries, performance colors, and clickable school statistics.
 
 ## Run locally
 
@@ -21,7 +21,7 @@ Start the development server:
 npm run dev
 ```
 
-Open [http://localhost:3000/elementary](http://localhost:3000/elementary) in a browser. Visiting `/` redirects there. Stop the server with `Ctrl+C`.
+Open [NYC](http://localhost:3000/elementary/nyc) or [Westchester](http://localhost:3000/elementary/westchester) in a browser. Visiting `/` or the former `/elementary` route redirects to `/elementary/nyc`. Stop the server with `Ctrl+C`.
 
 ### Optional CARTO basemap
 
@@ -49,13 +49,20 @@ npm run start
 
 ## Data and maps
 
-- The app reads its optimized school statistics from `public/schools.json`.
+- The NYC map reads its optimized school statistics from `public/schools.json`.
 - `scripts/build_schools_json.py` rebuilds that file from the original NYC Public Schools demographic and 2026 ELA/Math workbooks, the NYC Open Data school-point service, the NYC School Construction Authority capacity report, and the 2025–26 MySchools 3-K, pre-K, kindergarten, and G&T directories. It no longer depends on a manually distilled comparison CSV.
 - The source workbooks contain much more than the UI currently shows: 2018–2026 grade-level results and breakdowns by disability, race/ethnicity, gender, economic status, and English-learner status, plus five years of enrollment and demographic counts.
 - NYCPS marks privacy-protected aggregate results with `s`. Those schools remain on the map with a gray marker and “Suppressed” in place of the protected values.
 - The basemap uses OpenStreetMap tiles, so an internet connection is needed to display the map background.
 - School locations come from NYC Open Data. Performance and demographic statistics come from NYC Public Schools. G&T program type and program codes come from MySchools.
 - The Admissions tab shows schoolwide estimated capacity and utilization from the latest available city report, plus selectable prior-year 3-K, pre-K, and kindergarten seats, applicants, and offer priority descriptions from MySchools. These historical figures do not indicate live seat availability. Schools absent from a source show an unavailable message.
+
+### Westchester data
+
+- `public/westchester-schools.json` combines 2024–25 NCES school locations, enrollment, grade spans, and demographics with [NYSED 2024–25 school report cards](https://data.nysed.gov/downloads.php). Each subject's proficiency combines published grade 3–5 counts; the marker score averages ELA and math proficiency. Missing or suppressed results stay unavailable.
+- `public/westchester-districts.geojson` contains [Westchester County GIS school district polygons](https://q-giswww.westchestergov.com/arcgis/rest/services/MappingWestchesterCounty/MapServer/87). These generalized boundaries are for exploration; confirm district assignment for an address with the district.
+- `public/westchester-zones-2015.geojson` contains the Westchester school polygons available from the [NCES 2015–16 School Attendance Boundary Survey](https://nces.ed.gov/programs/edge/SABS). This is an incomplete, historical layer that is off by default. A verified current countywide elementary attendance-zone dataset is not published by the county. Confirm current assignments with each district.
+- Refresh all three Westchester files with `python3 scripts/build_westchester_json.py`. The builder fetches NYSED report cards, the [NCES 2024–25 school data](https://nces.ed.gov/opengis/rest/services/K12_School_Locations/EDGE_ADMINDATA_PUBLICSCH_2425/MapServer/1), the NCES boundary survey, and county GIS data.
 
 Refresh the checked-in JSON from the official sources:
 

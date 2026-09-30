@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'NYC Elementary School Map',
-  description: 'Explore 2025–26 NYC public elementary school performance and demographic statistics on an interactive map.',
+  title: 'Elementary School Maps',
+  description: 'Explore public elementary schools, district boundaries, and assessment results in New York City and Westchester County.',
 };
 
 export default function RootLayout({

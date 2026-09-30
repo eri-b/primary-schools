@@ -73,6 +73,28 @@ select {
   background: #f8fafb;
   box-shadow: 8px 0 28px rgb(16 42 67 / 8%);
 }
+.region-nav {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+.region-nav a {
+  padding: 7px 11px;
+  border: 1px solid #cbd7dd;
+  color: #334e68;
+  font-size: 0.8rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+.region-nav a[aria-current='page'] {
+  border-color: #102a43;
+  background: #102a43;
+  color: #fff;
+}
+.region-nav a:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
 .brand-row {
   display: flex;
   align-items: center;
