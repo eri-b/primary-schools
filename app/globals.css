@@ -74,7 +74,8 @@ select {
   box-shadow: 8px 0 28px rgb(16 42 67 / 8%);
 }
 .region-nav {
-  display: flex;
+  /* Temporarily hide the NYC/Westchester location switch. */
+  display: none;
   gap: 8px;
   margin: 0 0 22px;
 }
