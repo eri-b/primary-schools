@@ -6,6 +6,7 @@ import type { GeoJsonObject } from 'geojson';
 import Link from 'next/link';
 import { ChevronDown, GraduationCap, MapPin, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { DataSourcesFooter } from '@/components/data-sources-footer';
 import {
   NativeSelect,
   NativeSelectOption,
@@ -809,13 +810,15 @@ export default function Home() {
           </div>
         </div>
 
-        <p className="source-note">
-          Performance: NYCPS 2026 ELA &amp; Math results. Demographics: NYCPS
-          2025–26 snapshot. Admissions: NYC SCA capacity report and 2025–26
-          MySchools directory. G&amp;T programs: 2025–26 MySchools directory.
-          Locations and boundaries: NYC Open Data. Elementary zones shown are
-          2024–25 and should be confirmed by address with NYCPS.
-        </p>
+        <DataSourcesFooter>
+          <p>
+            Performance: NYCPS 2026 ELA &amp; Math results. Demographics: NYCPS
+            2025–26 snapshot. Admissions: NYC SCA capacity report and 2025–26
+            MySchools directory. G&amp;T programs: 2025–26 MySchools directory.
+            Locations and boundaries: NYC Open Data. Elementary zones shown are
+            2024–25 and should be confirmed by address with NYCPS.
+          </p>
+        </DataSourcesFooter>
       </aside>
 
       <section className="map-stage" aria-label="Interactive school map">
