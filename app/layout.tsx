@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Elementary School Maps',
-  description: 'Explore public elementary schools, district boundaries, and assessment results in New York City and Westchester County.',
+  description: 'Explore public elementary schools and district boundaries across New York City, Westchester, Long Island, and nearby New Jersey and Connecticut.',
 };
 
 export default function RootLayout({

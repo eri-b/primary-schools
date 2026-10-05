@@ -647,6 +647,8 @@ export default function Home() {
         <nav className="region-nav" aria-label="Choose region">
           <Link href="/elementary/nyc" aria-current="page">NYC</Link>
           <Link href="/elementary/westchester">Westchester</Link>
+          <Link href="/elementary/long-island">Long Island</Link>
+          <Link href="/elementary/neighbors">NJ / CT</Link>
         </nav>
         <div className="brand-row">
           <span className="brand-mark" aria-hidden="true">

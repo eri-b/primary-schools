@@ -1,6 +1,6 @@
 # Elementary School Maps
 
-Interactive Leaflet maps of New York City and Westchester County public elementary schools. They include school search, district boundaries, performance colors, and clickable school statistics.
+Interactive Leaflet maps of public elementary schools in New York City, Westchester, Long Island, and nearby New Jersey and Connecticut. They include school search, district boundaries, and clickable school details. New York maps also show assessment scores where available.
 
 ## Run locally
 
@@ -21,7 +21,7 @@ Start the development server:
 npm run dev
 ```
 
-Open [NYC](http://localhost:3000/elementary/nyc) or [Westchester](http://localhost:3000/elementary/westchester) in a browser. Visiting `/` or the former `/elementary` route redirects to `/elementary/nyc`. Stop the server with `Ctrl+C`.
+Open [NYC](http://localhost:3000/elementary/nyc), [Westchester](http://localhost:3000/elementary/westchester), [Long Island](http://localhost:3000/elementary/long-island), or [nearby NJ and CT](http://localhost:3000/elementary/neighbors) in a browser. Visiting `/` or the former `/elementary` route redirects to `/elementary/nyc`. Stop the server with `Ctrl+C`.
 
 ### Optional CARTO basemap
 
@@ -63,6 +63,13 @@ npm run start
 - `public/westchester-districts.geojson` contains [Westchester County GIS school district polygons](https://q-giswww.westchestergov.com/arcgis/rest/services/MappingWestchesterCounty/MapServer/87). These generalized boundaries are for exploration; confirm district assignment for an address with the district.
 - `public/westchester-zones-2015.geojson` contains the Westchester school polygons available from the [NCES 2015–16 School Attendance Boundary Survey](https://nces.ed.gov/programs/edge/SABS). This is an incomplete, historical layer that is off by default. A verified current countywide elementary attendance-zone dataset is not published by the county. Confirm current assignments with each district.
 - Refresh all three Westchester files with `python3 scripts/build_westchester_json.py`. The builder fetches NYSED report cards, the [NCES 2024–25 school data](https://nces.ed.gov/opengis/rest/services/K12_School_Locations/EDGE_ADMINDATA_PUBLICSCH_2425/MapServer/1), the NCES boundary survey, and county GIS data.
+
+### Long Island and nearby NJ/CT data
+
+- `public/long-island-schools.json` includes Nassau and Suffolk public elementary schools from NCES 2024–25, with grades 3–5 ELA and math proficiency matched to published NYSED 2024–25 report cards where possible. Missing or suppressed scores remain unavailable.
+- `public/neighbors-schools.json` includes Bergen, Hudson, Essex, Union, Passaic, and Middlesex counties in NJ, plus the Western Connecticut and Greater Bridgeport planning regions. Connecticut's planning regions replaced counties in the federal 2024–25 data; together those two regions cover the southwest Connecticut area near former Fairfield County.
+- Both maps include generalized 2024–25 NCES district boundaries. The NJ/CT map currently shows school locations, grade spans, enrollment, and demographics without assessment scores. Results from different states have not been combined into one color scale.
+- Refresh with `python3 scripts/build_metro_json.py`. Pass `long-island` or `neighbors` to refresh just one region. Sources: [NCES schools](https://nces.ed.gov/opengis/rest/services/K12_School_Locations/EDGE_ADMINDATA_PUBLICSCH_2425/MapServer/1), [NCES district boundaries](https://nces.ed.gov/opengis/rest/services/School_District_Boundaries/EDGE_ADMINDATA_SCHOOLDISTRICTS_SY2425/MapServer/1), and [NYSED report cards](https://data.nysed.gov/downloads.php).
 
 Refresh the checked-in JSON from the official sources:
 
