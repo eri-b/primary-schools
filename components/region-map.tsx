@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 
-type Result = { tested: number; proficient: number | null; level4: number | null; grades: string[] } | null;
+type Result = { tested: number | null; proficient: number | null; index?: number | null; level4: number | null; grades: string[] } | null;
 type School = {
   id: string;
   name: string;
@@ -28,10 +28,12 @@ type School = {
   reportUrl: string | null;
 };
 
-type Region = 'long-island' | 'neighbors';
+type Region = 'long-island' | 'hudson-valley' | 'new-jersey' | 'connecticut';
 const CONFIG = {
   'long-island': { title: 'Long Island elementary schools', center: [40.82, -73.1] as [number, number], zoom: 9, placeholder: 'Try Hempstead or Riverhead', scores: true },
-  neighbors: { title: 'Nearby NJ and CT elementary schools', center: [40.91, -73.84] as [number, number], zoom: 9, placeholder: 'Try Bergen or Greenwich', scores: false },
+  'hudson-valley': { title: 'Hudson Valley elementary schools', center: [41.72, -73.85] as [number, number], zoom: 9, placeholder: 'Try Poughkeepsie or Kingston', scores: true },
+  'new-jersey': { title: 'Nearby New Jersey elementary schools', center: [40.79, -74.29] as [number, number], zoom: 10, placeholder: 'Try Bergen or Montclair', scores: true },
+  connecticut: { title: 'Southwest Connecticut elementary schools', center: [41.2, -73.45] as [number, number], zoom: 10, placeholder: 'Try Greenwich or Bridgeport', scores: true },
 };
 
 function escapeHtml(value: string) {
@@ -40,6 +42,10 @@ function escapeHtml(value: string) {
 
 function score(value: number | null | undefined) {
   return value == null ? 'Unavailable' : `${value.toFixed(1)}%`;
+}
+
+function assessmentScore(value: number | null | undefined, region: Region) {
+  return value == null ? 'Unavailable' : `${value.toFixed(1)}${region === 'connecticut' ? '' : '%'}`;
 }
 
 function colorFor(value: number | null) {
@@ -55,7 +61,12 @@ function markerColor(school: School, hasScores: boolean) {
   return school.county.endsWith(', NJ') ? '#2f78a8' : '#e39a22';
 }
 
-function popupFor(school: School, hasScores: boolean) {
+function popupFor(school: School, region: Region) {
+  const hasScores = CONFIG[region].scores;
+  const nj = region === 'new-jersey';
+  const ct = region === 'connecticut';
+  const elaValue = ct ? school.ela?.index : school.ela?.proficient;
+  const mathValue = ct ? school.math?.index : school.math?.proficient;
   const demographics = [
     ['Asian', school.demographics.asian], ['Black', school.demographics.black],
     ['Hispanic', school.demographics.hispanic], ['White', school.demographics.white],
@@ -66,9 +77,9 @@ function popupFor(school: School, hasScores: boolean) {
     <h2>${escapeHtml(school.name)}</h2>
     <p class="popup-meta">${escapeHtml(school.city)} · Grades ${escapeHtml(school.grades)} · ${school.enrollment?.toLocaleString() ?? 'Unknown'} students</p>
     ${hasScores ? `<div class="score-grid">
-      <div><strong>${score(school.ela?.proficient)}</strong><span>ELA proficient</span></div>
-      <div><strong>${score(school.math?.proficient)}</strong><span>Math proficient</span></div>
-      <div class="score-average"><strong>${score(school.average)}</strong><span>Average proficient</span></div>
+      <div><strong>${assessmentScore(elaValue, region)}</strong><span>ELA ${ct ? 'index' : 'proficient'}</span></div>
+      <div><strong>${assessmentScore(mathValue, region)}</strong><span>Math ${ct ? 'index' : 'proficient'}</span></div>
+      <div class="score-average"><strong>${assessmentScore(school.average, region)}</strong><span>Average ${ct ? 'index' : 'proficient'}</span></div>
     </div>` : ''}
     <details class="popup-details"><summary>More details</summary><div class="popup-details-content">
       <section><h3>School</h3><dl class="detail-grid">
@@ -77,14 +88,14 @@ function popupFor(school: School, hasScores: boolean) {
         <div><dt>County/region</dt><dd>${escapeHtml(school.county)}</dd></div>
         <div><dt>Enrollment</dt><dd>${school.enrollment?.toLocaleString() ?? 'Unavailable'}</dd></div>
       </dl></section>
-      ${hasScores ? `<section><h3>2024–25 state assessments</h3><dl class="detail-grid">
-        <div><dt>ELA tested, grades 3–5</dt><dd>${school.ela?.tested.toLocaleString() ?? 'Unavailable'}</dd></div>
-        <div><dt>ELA proficient</dt><dd>${score(school.ela?.proficient)}</dd></div>
-        <div><dt>ELA level 4</dt><dd>${score(school.ela?.level4)}</dd></div>
-        <div><dt>Math tested, grades 3–5</dt><dd>${school.math?.tested.toLocaleString() ?? 'Unavailable'}</dd></div>
-        <div><dt>Math proficient</dt><dd>${score(school.math?.proficient)}</dd></div>
-        <div><dt>Math level 4</dt><dd>${score(school.math?.level4)}</dd></div>
-      </dl><p class="detail-note">Results combine published grade 3–5 counts. Small groups suppressed by NYSED remain unavailable. ${school.reportUrl ? `<a href="${escapeHtml(school.reportUrl)}" target="_blank" rel="noopener noreferrer">NYSED report card</a>` : 'No matching NYSED report card was found.'}</p></section>` : ''}
+      ${hasScores ? `<section><h3>2024–25 ${nj ? 'NJSLA assessments' : ct ? 'state accountability' : 'state assessments'}</h3><dl class="detail-grid">
+        ${ct ? '' : `<div><dt>ELA tested, grades 3–5</dt><dd>${school.ela?.tested?.toLocaleString() ?? 'Unavailable'}</dd></div>`}
+        <div><dt>ELA ${ct ? 'performance index' : 'proficient'}</dt><dd>${assessmentScore(elaValue, region)}</dd></div>
+        ${nj || ct ? '' : `<div><dt>ELA level 4</dt><dd>${score(school.ela?.level4)}</dd></div>`}
+        ${ct ? '' : `<div><dt>Math tested, grades 3–5</dt><dd>${school.math?.tested?.toLocaleString() ?? 'Unavailable'}</dd></div>`}
+        <div><dt>Math ${ct ? 'performance index' : 'proficient'}</dt><dd>${assessmentScore(mathValue, region)}</dd></div>
+        ${nj || ct ? '' : `<div><dt>Math level 4</dt><dd>${score(school.math?.level4)}</dd></div>`}
+      </dl><p class="detail-note">${ct ? 'The Connecticut performance index is a 0–100 achievement measure across all tested grades at the school; it is not a proficiency percentage.' : nj ? 'NJSLA proficiency is Levels 4 and 5, weighted across published grades 3–5. Suppressed results remain unavailable.' : 'Results combine published grade 3–5 counts. Small groups suppressed by NYSED remain unavailable.'} ${school.reportUrl ? `<a href="${escapeHtml(school.reportUrl)}" target="_blank" rel="noopener noreferrer">${ct ? 'CSDE accountability data' : nj ? 'NJDOE assessment data' : 'NYSED report card'}</a>` : `No matching ${ct ? 'CSDE' : nj ? 'NJDOE' : 'NYSED'} results were found.`}</p></section>` : ''}
       <section><h3>Student demographics</h3><dl class="detail-grid">${demographics.map(([label, value]) => `<div><dt>${label}</dt><dd>${score(value as number | null)}</dd></div>`).join('')}</dl><p class="detail-note">2024–25 NCES Common Core of Data.</p></section>
     </div></details>
   </article>`;
@@ -184,7 +195,7 @@ export function RegionMap({ region }: { region: Region }) {
     for (const school of filteredSchools) {
       L.circleMarker([school.lat, school.lng], { pane: 'schools', className: 'school-marker', radius: 6.5, color: '#fff', weight: 2, fillColor: markerColor(school, config.scores), fillOpacity: 0.96 })
         .bindTooltip(school.name, { direction: 'top', offset: [0, -5] })
-        .bindPopup(popupFor(school, config.scores), { minWidth: 300, maxWidth: 360, maxHeight: 520 }).addTo(layer);
+        .bindPopup(popupFor(school, region), { minWidth: 300, maxWidth: 360, maxHeight: 520 }).addTo(layer);
       bounds.push([school.lat, school.lng]);
     }
     const filterKey = `${query}\n${county}\n${district}`;
@@ -192,11 +203,11 @@ export function RegionMap({ region }: { region: Region }) {
       lastSearchRef.current = filterKey;
       if ((query || county !== 'All counties' || district !== 'All districts') && bounds.length) map.fitBounds(bounds, { padding: [36, 36], maxZoom: bounds.length === 1 ? 14 : 13 });
     }
-  }, [config.scores, county, district, filteredSchools, mapReady, query, schools.length]);
+  }, [config.scores, county, district, filteredSchools, mapReady, query, region, schools.length]);
 
   return <main className="map-shell">
     <aside className="control-panel">
-      <nav className="region-nav" aria-label="Choose region"><Link href="/elementary/nyc">NYC</Link><Link href="/elementary/westchester">Westchester</Link><Link href="/elementary/long-island" aria-current={region === 'long-island' ? 'page' : undefined}>Long Island</Link><Link href="/elementary/neighbors" aria-current={region === 'neighbors' ? 'page' : undefined}>NJ / CT</Link></nav>
+      <nav className="region-nav" aria-label="Choose region"><Link href="/elementary/nyc">NYC</Link><Link href="/elementary/westchester">Westchester</Link><Link href="/elementary/long-island" aria-current={region === 'long-island' ? 'page' : undefined}>Long Island</Link><Link href="/elementary/hudson-valley" aria-current={region === 'hudson-valley' ? 'page' : undefined}>Hudson Valley</Link><Link href="/elementary/new-jersey" aria-current={region === 'new-jersey' ? 'page' : undefined}>New Jersey</Link><Link href="/elementary/connecticut" aria-current={region === 'connecticut' ? 'page' : undefined}>Connecticut</Link></nav>
       <div className="brand-row"><span className="brand-mark" aria-hidden="true"><GraduationCap size={22} strokeWidth={2.2} /></span><div><p className="eyebrow">2024–25 school year</p><h1>{config.title}</h1></div></div>
       <p className="intro">Select a dot for school info.</p>
       <div className="filters"><label htmlFor="region-search">School, city, county, or district</label><div className="search-wrap"><Search size={18} aria-hidden="true" /><Input id="region-search" type="search" placeholder={config.placeholder} value={query} onChange={(event) => setQuery(event.target.value)} className="h-11 rounded-none border-slate-300 bg-white pl-10 text-base shadow-none focus-visible:ring-2" /></div>
@@ -204,8 +215,8 @@ export function RegionMap({ region }: { region: Region }) {
       </div>
       <div className="result-count" aria-live="polite"><MapPin size={17} aria-hidden="true" /><strong>{filteredSchools.length.toLocaleString()}</strong><span>{filteredSchools.length === 1 ? 'school shown' : 'schools shown'}</span></div>
       <fieldset className="layer-controls"><legend>Boundary layers</legend><label htmlFor="district-layer"><span><i className="line-key district-key" />School districts</span><input id="district-layer" className="layer-toggle" type="checkbox" role="switch" checked={showDistricts} aria-checked={showDistricts} onChange={(event) => setShowDistricts(event.target.checked)} disabled={!districts} /></label><p>District boundaries are generalized 2024–25 NCES data. Confirm a specific address with the district.</p>{boundaryError && <p className="boundary-error">District boundaries could not be loaded.</p>}</fieldset>
-      {config.scores ? <div className="legend" aria-label="Average proficiency color legend"><p>Average proficiency</p><div><span className="dot high" />75% or more</div><div><span className="dot upper" />55–74.9%</div><div><span className="dot middle" />35–54.9%</div><div><span className="dot lower" />Below 35%</div><div><span className="dot unavailable" />Unavailable</div></div> : <div className="legend" aria-label="State color legend"><p>School location</p><div><span className="dot upper" />New Jersey</div><div><span className="dot middle" />Connecticut</div></div>}
-      <DataSourcesFooter><p>{config.scores && <>Scores: <a href="https://data.nysed.gov/downloads.php" target="_blank" rel="noopener noreferrer">NYSED 2024–25 report cards</a>, combining published grades 3–5 counts. </>}Enrollment, demographics, and locations: <a href="https://nces.ed.gov/opengis/rest/services/K12_School_Locations/EDGE_ADMINDATA_PUBLICSCH_2425/MapServer/1" target="_blank" rel="noopener noreferrer">NCES 2024–25</a>. District boundaries: <a href="https://nces.ed.gov/opengis/rest/services/School_District_Boundaries/EDGE_ADMINDATA_SCHOOLDISTRICTS_SY2425/MapServer/1" target="_blank" rel="noopener noreferrer">NCES 2024–25</a>. {!config.scores && 'State assessment scores are not yet included for NJ and CT.'}</p></DataSourcesFooter>
+      {config.scores && <div className="legend" aria-label={region === 'connecticut' ? 'Average performance index color legend' : 'Average proficiency color legend'}><p>Average {region === 'connecticut' ? 'performance index' : 'proficiency'}</p><div><span className="dot high" />75{region === 'connecticut' ? ' or more' : '% or more'}</div><div><span className="dot upper" />55–74.9{region === 'connecticut' ? '' : '%'}</div><div><span className="dot middle" />35–54.9{region === 'connecticut' ? '' : '%'}</div><div><span className="dot lower" />Below 35{region === 'connecticut' ? '' : '%'}</div><div><span className="dot unavailable" />Unavailable</div></div>}
+      <DataSourcesFooter><p>{(region === 'long-island' || region === 'hudson-valley') && <>Scores: <a href="https://data.nysed.gov/downloads.php" target="_blank" rel="noopener noreferrer">NYSED 2024–25 report cards</a>, combining published grades 3–5 counts. </>}{region === 'new-jersey' && <>Scores: <a href="https://www.nj.gov/education/assessment/results/reports/2425/index.shtml" target="_blank" rel="noopener noreferrer">NJDOE 2024–25 NJSLA</a>, combining published grades 3–5 results. </>}{region === 'connecticut' && <>Scores: <a href="https://data.ct.gov/Education/Next-Generation-Accountability-System/h28j-iix5" target="_blank" rel="noopener noreferrer">CSDE 2024–25 accountability data</a>, using the ELA and math performance index. This index is not a proficiency percentage. </>}Enrollment, demographics, and locations: <a href="https://nces.ed.gov/opengis/rest/services/K12_School_Locations/EDGE_ADMINDATA_PUBLICSCH_2425/MapServer/1" target="_blank" rel="noopener noreferrer">NCES 2024–25</a>. District boundaries: <a href="https://nces.ed.gov/opengis/rest/services/School_District_Boundaries/EDGE_ADMINDATA_SCHOOLDISTRICTS_SY2425/MapServer/1" target="_blank" rel="noopener noreferrer">NCES 2024–25</a>.</p></DataSourcesFooter>
     </aside>
     <section className="map-stage" aria-label="Interactive school map">{loadError && <div className="map-message">School data could not be loaded.</div>}{!loadError && schools.length === 0 && <div className="map-message">Loading schools…</div>}{schools.length > 0 && filteredSchools.length === 0 && <div className="empty-message">No schools match those filters.</div>}<div ref={mapElementRef} className="map-canvas" role="application" aria-label={`Map of ${config.title}`} /></section>
   </main>;

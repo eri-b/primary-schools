@@ -1,12 +1,21 @@
 """Build nearby elementary-school maps from official 2024–25 NCES data.
 
 Long Island assessment results are matched to NYSED school report cards.
-NJ and CT assessment fields remain unavailable rather than mixing unlike tests.
+NJ proficiency comes from published NJSLA grade files. Connecticut's
+performance index comes from the CSDE accountability dataset; it is a
+different measure and must be labeled separately from proficiency.
 """
 
 import concurrent.futures
 import difflib
+import io
 import json
+import time
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
+import zipfile
+from collections import defaultdict
 from pathlib import Path
 
 from build_westchester_json import (
@@ -20,15 +29,22 @@ REGIONS = {
     "long-island": {
         "Nassau": "36059", "Suffolk": "36103",
     },
-    "neighbors": {
+    "hudson-valley": {
+        "Dutchess": "36027", "Putnam": "36079", "Ulster": "36111",
+    },
+    "new-jersey": {
         "Bergen, NJ": "34003", "Hudson, NJ": "34017",
         "Essex, NJ": "34013", "Union, NJ": "34039",
         "Passaic, NJ": "34031", "Middlesex, NJ": "34023",
+    },
+    "connecticut": {
         "Western Connecticut": "09190", "Greater Bridgeport": "09120",
     },
 }
-NYSED_COUNTIES = {"Nassau": "28", "Suffolk": "58"}
-FIELDS = "NCESSCH,SCH_NAME,LEA_NAME,GSLO,GSHI,PK,KG,G01,G02,G03,G04,G05,TOTAL,LATCOD,LONCOD,LCITY,LSTREET1,SCHOOL_TYPE_TEXT,AM,AS,BL,HP,HI,TR,WH,CNTY"
+NYSED_COUNTIES = {"Nassau": "28", "Suffolk": "58", "Dutchess": "13", "Putnam": "48", "Ulster": "62"}
+FIELDS = "NCESSCH,SCH_NAME,LEA_NAME,ST_LEAID,GSLO,GSHI,PK,KG,G01,G02,G03,G04,G05,TOTAL,LATCOD,LONCOD,LCITY,LSTREET1,SCHOOL_TYPE_TEXT,AM,AS,BL,HP,HI,TR,WH,CNTY"
+NJ_REPORTS = "https://www.nj.gov/education/assessment/results/reports/2425/spring/"
+CT_ACCOUNTABILITY = "https://data.ct.gov/resource/h28j-iix5.json"
 
 
 def nysed_catalog(county_code):
@@ -50,9 +66,9 @@ def score_for(instid):
     return instid, {"ela": report_counts(page, "ela"), "math": report_counts(page, "math"), "url": url}
 
 
-def match_scores(rows):
+def match_scores(rows, counties):
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-        catalogs = list(pool.map(nysed_catalog, NYSED_COUNTIES.values()))
+        catalogs = list(pool.map(nysed_catalog, (NYSED_COUNTIES[county] for county in counties)))
     catalog = {key: value for part in catalogs for key, value in part.items()}
     by_name = {}
     for instid, item in catalog.items():
@@ -80,6 +96,133 @@ def match_scores(rows):
     return {school_id: scores[instid] for school_id, instid in matches.items()}
 
 
+def fetch_binary(url):
+    for attempt in range(4):
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": "schools-map-data-builder/1.0"})
+            with urllib.request.urlopen(request, timeout=90) as response:
+                return response.read()
+        except (TimeoutError, OSError):
+            if attempt == 3:
+                raise
+            time.sleep(2 ** attempt)
+
+
+def xlsx_rows(data):
+    """Read the first sheet of NJDOE's XLSX with the Python standard library."""
+    namespace = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        strings_root = ET.fromstring(archive.read("xl/sharedStrings.xml"))
+        strings = ["".join(node.itertext()) for node in strings_root.findall(namespace + "si")]
+        with archive.open("xl/worksheets/sheet1.xml") as sheet:
+            for _, row in ET.iterparse(sheet, events=("end",)):
+                if row.tag != namespace + "row":
+                    continue
+                values = [None] * 17
+                for cell in row.findall(namespace + "c"):
+                    column = "".join(char for char in cell.attrib["r"] if char.isalpha())
+                    index = 0
+                    for char in column:
+                        index = index * 26 + ord(char) - 64
+                    if not 1 <= index <= len(values):
+                        continue
+                    value = cell.find(namespace + "v")
+                    if value is not None and value.text is not None:
+                        values[index - 1] = strings[int(value.text)] if cell.attrib.get("t") == "s" else value.text
+                yield values
+                row.clear()
+
+
+def nj_grade_scores(subject_grade):
+    subject, grade = subject_grade
+    filename = f"{subject}{grade:02d} NJSLA DATA 2024-25.xlsx"
+    url = NJ_REPORTS + urllib.parse.quote(filename)
+    results = {}
+    for row in xlsx_rows(fetch_binary(url)):
+        county, _, district, _, school_code, name, group, subgroup = row[:8]
+        if county not in {"03", "13", "17", "23", "31", "39"} or not school_code or group != "Total" or subgroup != "All Students":
+            continue
+        valid, level4, level5 = row[10], row[15], row[16]
+        try:
+            result = (int(valid), float(level4) + float(level5))
+        except (TypeError, ValueError):
+            result = None
+        results[(county + district, normalize(name))] = result
+    return subject.lower(), grade, results
+
+
+def match_nj_scores(rows):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        grades = list(pool.map(nj_grade_scores, [(subject, grade) for subject in ("ELA", "MAT") for grade in (3, 4, 5)]))
+    reports = defaultdict(lambda: defaultdict(dict))
+    for subject, grade, results in grades:
+        for key, result in results.items():
+            reports[key][subject][grade] = result
+    by_district = defaultdict(list)
+    for key in reports:
+        by_district[key[0]].append(key)
+    matches = {}
+    for row in rows:
+        district = (row.get("ST_LEAID") or "").replace("NJ-", "")
+        key = (district, normalize(row["SCH_NAME"]))
+        if key not in reports:
+            candidates = sorted(((difflib.SequenceMatcher(None, key[1], candidate[1]).ratio(), candidate)
+                                 for candidate in by_district[district]), reverse=True)
+            key = candidates[0][1] if candidates and candidates[0][0] >= .85 and (len(candidates) == 1 or candidates[0][0] - candidates[1][0] >= .08) else None
+        if key is None or key not in reports:
+            continue
+        result = {"url": "https://www.nj.gov/education/assessment/results/reports/2425/index.shtml"}
+        for subject in ("ela", "mat"):
+            entries = reports[key][subject]
+            # Suppressed grade rows cannot be reconstructed from other cells.
+            if not entries or any(item is None for item in entries.values()):
+                result["math" if subject == "mat" else "ela"] = None
+                continue
+            tested = sum(item[0] for item in entries.values())
+            result["math" if subject == "mat" else "ela"] = {
+                "tested": tested,
+                "proficient": round(sum(item[0] * item[1] for item in entries.values()) / tested, 1) if tested else None,
+                "level4": None,
+                "grades": [str(grade) for grade in sorted(entries)],
+            }
+        matches[row["NCESSCH"]] = result
+    return matches
+
+
+def match_ct_scores(rows):
+    response = json.loads(fetch(api_url(CT_ACCOUNTABILITY, **{
+        "$where": "schoolyear='2024-25'", "$select": "reportingdistrictcode,schoolname,schoolcode,ind1ela_all_rate,ind1math_all_rate",
+        "$limit": 2000,
+    })))
+    if len(response) >= 2000:
+        raise RuntimeError("Connecticut accountability response may be truncated")
+    reports = {(item["reportingdistrictcode"], normalize(item["schoolname"])): item
+               for item in response if item.get("schoolcode") != "0000000"}
+    by_district = defaultdict(list)
+    for key in reports:
+        by_district[key[0]].append(key)
+    matches = {}
+    for row in rows:
+        district = (row.get("ST_LEAID") or "").replace("CT-", "")
+        key = (district, normalize(row["SCH_NAME"]))
+        if key not in reports:
+            candidates = sorted(((difflib.SequenceMatcher(None, key[1], candidate[1]).ratio(), candidate)
+                                 for candidate in by_district[district]), reverse=True)
+            key = candidates[0][1] if candidates and candidates[0][0] >= .85 and (len(candidates) == 1 or candidates[0][0] - candidates[1][0] >= .08) else None
+        if key is None or key not in reports:
+            continue
+        report = reports[key]
+        result = {"url": "https://data.ct.gov/Education/Next-Generation-Accountability-System/h28j-iix5"}
+        for subject, field in (("ela", "ind1ela_all_rate"), ("math", "ind1math_all_rate")):
+            try:
+                index = round(float(report[field]), 1)
+            except (KeyError, TypeError, ValueError):
+                index = None
+            result[subject] = {"tested": None, "proficient": None, "index": index, "level4": None, "grades": []} if index is not None else None
+        matches[row["NCESSCH"]] = result
+    return matches
+
+
 def school_rows(county_code):
     response = json.loads(fetch(api_url(NCES, where=f"CNTY='{county_code}'", outFields=FIELDS,
                                         returnGeometry="false", f="json", resultRecordCount=2000)))
@@ -88,9 +231,10 @@ def school_rows(county_code):
     return [feature["attributes"] for feature in response["features"]]
 
 
-def school_record(row, county, result):
+def school_record(row, county, result, region):
     ela, math = result.get("ela"), result.get("math")
-    average = round((ela["proficient"] + math["proficient"]) / 2, 1) if ela and math and ela["proficient"] is not None and math["proficient"] is not None else None
+    metric = "index" if region == "connecticut" else "proficient"
+    average = round((ela[metric] + math[metric]) / 2, 1) if ela and math and ela[metric] is not None and math[metric] is not None else None
     total = row.get("TOTAL") if isinstance(row.get("TOTAL"), int) and row["TOTAL"] >= 0 else None
     demographics = {key: round(100 * row[column] / total, 1) if total and isinstance(row.get(column), int) and row[column] >= 0 else None
                     for key, column in (("asian", "AS"), ("black", "BL"), ("hispanic", "HI"), ("white", "WH"),
@@ -127,8 +271,9 @@ def build_region(region, counties):
             and any((row.get(grade) or 0) > 0 for grade in ("PK", "KG", "G01", "G02", "G03", "G04"))
             and isinstance(row.get("LATCOD"), (int, float))
             and isinstance(row.get("LONCOD"), (int, float))]
-    scores = match_scores([row for _, row in rows]) if region == "long-island" else {}
-    schools = [school_record(row, county, scores.get(row["NCESSCH"], {})) for county, row in rows]
+    school_items = [row for _, row in rows]
+    scores = match_scores(school_items, counties) if region in ("long-island", "hudson-valley") else match_nj_scores(school_items) if region == "new-jersey" else match_ct_scores(school_items)
+    schools = [school_record(row, county, scores.get(row["NCESSCH"], {}), region) for county, row in rows]
     schools.sort(key=lambda item: (item["county"], item["district"], item["name"]))
     PUBLIC.joinpath(f"{region}-schools.json").write_text(json.dumps(schools, separators=(",", ":")) + "\n")
     boundaries = district_boundaries(counties.values())

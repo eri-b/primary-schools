@@ -205,7 +205,7 @@ export default function WestchesterElementary() {
 
   return <main className="map-shell">
     <aside className="control-panel">
-      <nav className="region-nav" aria-label="Choose region"><Link href="/elementary/nyc">NYC</Link><Link href="/elementary/westchester" aria-current="page">Westchester</Link><Link href="/elementary/long-island">Long Island</Link><Link href="/elementary/neighbors">NJ / CT</Link></nav>
+      <nav className="region-nav" aria-label="Choose region"><Link href="/elementary/nyc">NYC</Link><Link href="/elementary/westchester" aria-current="page">Westchester</Link><Link href="/elementary/long-island">Long Island</Link><Link href="/elementary/hudson-valley">Hudson Valley</Link><Link href="/elementary/new-jersey">New Jersey</Link><Link href="/elementary/connecticut">Connecticut</Link></nav>
       <div className="brand-row"><span className="brand-mark" aria-hidden="true"><GraduationCap size={22} strokeWidth={2.2} /></span><div><p className="eyebrow">2024–25 school year</p><h1>Westchester elementary schools</h1></div></div>
       <p className="intro">Select a dot for school info.</p>
       <div className="filters"><label htmlFor="westchester-search">School, city, or district</label><div className="search-wrap"><Search size={18} aria-hidden="true" /><Input id="westchester-search" type="search" placeholder="Try Scarsdale or Concord Road" value={query} onChange={(event) => setQuery(event.target.value)} className="h-11 rounded-none border-slate-300 bg-white pl-10 text-base shadow-none focus-visible:ring-2" /></div>

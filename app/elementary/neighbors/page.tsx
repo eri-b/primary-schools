@@ -1,5 +1,5 @@
-import { RegionMap } from '@/components/region-map';
+import { permanentRedirect } from 'next/navigation';
 
 export default function NeighborsPage() {
-  return <RegionMap region="neighbors" />;
+  permanentRedirect('/elementary/new-jersey');
 }
