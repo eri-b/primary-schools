@@ -30,7 +30,8 @@ REGIONS = {
         "Nassau": "36059", "Suffolk": "36103",
     },
     "hudson-valley": {
-        "Dutchess": "36027", "Putnam": "36079", "Ulster": "36111",
+        "Dutchess": "36027", "Orange": "36071", "Putnam": "36079", "Rockland": "36087",
+        "Sullivan": "36105", "Ulster": "36111",
     },
     "new-jersey": {
         "Bergen, NJ": "34003", "Hudson, NJ": "34017",
@@ -41,7 +42,7 @@ REGIONS = {
         "Western Connecticut": "09190", "Greater Bridgeport": "09120",
     },
 }
-NYSED_COUNTIES = {"Nassau": "28", "Suffolk": "58", "Dutchess": "13", "Putnam": "48", "Ulster": "62"}
+NYSED_COUNTIES = {"Nassau": "28", "Suffolk": "58", "Dutchess": "13", "Orange": "44", "Putnam": "48", "Rockland": "50", "Sullivan": "59", "Ulster": "62"}
 FIELDS = "NCESSCH,SCH_NAME,LEA_NAME,ST_LEAID,GSLO,GSHI,PK,KG,G01,G02,G03,G04,G05,TOTAL,LATCOD,LONCOD,LCITY,LSTREET1,SCHOOL_TYPE_TEXT,AM,AS,BL,HP,HI,TR,WH,CNTY"
 NJ_REPORTS = "https://www.nj.gov/education/assessment/results/reports/2425/spring/"
 CT_ACCOUNTABILITY = "https://data.ct.gov/resource/h28j-iix5.json"

@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
-import Link from 'next/link';
-import { ChevronDown, GraduationCap, MapPin, Search } from 'lucide-react';
+import { ChevronDown, MapPin, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
+import { SchoolMapHeader } from '@/components/school-map-header';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 
 type Result = { tested: number; proficient: number | null; level4: number | null; grades: string[] } | null;
@@ -205,8 +205,7 @@ export default function WestchesterElementary() {
 
   return <main className="map-shell">
     <aside className="control-panel">
-      <nav className="region-nav" aria-label="Choose region"><Link href="/elementary/nyc">NYC</Link><Link href="/elementary/westchester" aria-current="page">Westchester</Link><Link href="/elementary/long-island">Long Island</Link><Link href="/elementary/hudson-valley">Hudson Valley</Link><Link href="/elementary/new-jersey">New Jersey</Link><Link href="/elementary/connecticut">Connecticut</Link></nav>
-      <div className="brand-row"><span className="brand-mark" aria-hidden="true"><GraduationCap size={22} strokeWidth={2.2} /></span><div><p className="eyebrow">2024–25 school year</p><h1>Westchester elementary schools</h1></div></div>
+      <SchoolMapHeader current="westchester" schoolYear="2024–25" />
       <p className="intro">Select a dot for school info.</p>
       <div className="filters"><label htmlFor="westchester-search">School, city, or district</label><div className="search-wrap"><Search size={18} aria-hidden="true" /><Input id="westchester-search" type="search" placeholder="Try Scarsdale or Concord Road" value={query} onChange={(event) => setQuery(event.target.value)} className="h-11 rounded-none border-slate-300 bg-white pl-10 text-base shadow-none focus-visible:ring-2" /></div>
         <details className="filter-section"><summary><span>Filters{(district !== 'All districts' || onlyScored) ? ' (active)' : ''}</span><ChevronDown size={17} aria-hidden="true" /></summary><div className="filter-grid"><div className="filter-control"><label htmlFor="westchester-district-filter">District</label><NativeSelect id="westchester-district-filter" className="w-full" value={district} onChange={(event) => setDistrict(event.target.value)}>{districtNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div><label className="filter-checkbox"><input type="checkbox" checked={onlyScored} onChange={(event) => setOnlyScored(event.target.checked)} />Has ELA and math scores</label></div></details>

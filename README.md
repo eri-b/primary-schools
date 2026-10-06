@@ -1,6 +1,6 @@
-# Elementary School Maps
+# NYC Metro School Maps
 
-Interactive Leaflet maps of public elementary schools in New York City, Westchester, Long Island, Dutchess, Putnam, Ulster, and nearby New Jersey and Connecticut. They include school search, district boundaries, and clickable school details. New York maps also show assessment scores where available.
+Interactive Leaflet maps of public elementary, middle, and high schools in New York City, Westchester, Long Island, Dutchess, Orange, Putnam, Rockland, Sullivan, Ulster, and nearby New Jersey and Connecticut. They include school search, district boundaries, and clickable school details. Elementary maps also show assessment scores where available.
 
 ## Run locally
 
@@ -21,7 +21,7 @@ Start the development server:
 npm run dev
 ```
 
-Open [NYC](http://localhost:3000/elementary/nyc), [Westchester](http://localhost:3000/elementary/westchester), [Long Island](http://localhost:3000/elementary/long-island), [Hudson Valley](http://localhost:3000/elementary/hudson-valley), [New Jersey](http://localhost:3000/elementary/new-jersey), or [Connecticut](http://localhost:3000/elementary/connecticut) in a browser. Visiting `/` or the former `/elementary` route redirects to `/elementary/nyc`; the former combined `/elementary/neighbors` route redirects to New Jersey. Stop the server with `Ctrl+C`.
+Open [NYC](http://localhost:3000/elementary/nyc), [Westchester](http://localhost:3000/elementary/westchester), [Long Island](http://localhost:3000/elementary/long-island), [Hudson Valley](http://localhost:3000/elementary/hudson-valley), [New Jersey](http://localhost:3000/elementary/new-jersey), or [Connecticut](http://localhost:3000/elementary/connecticut) in a browser. Use the school-level dropdown to switch to middle or high schools while keeping the same location. Visiting `/`, `/elementary`, `/middle`, or `/high` redirects to NYC at the selected level; the former `/elementary/neighbors` route redirects to New Jersey. Stop the server with `Ctrl+C`.
 
 ### Optional CARTO basemap
 
@@ -67,10 +67,17 @@ npm run start
 ### Long Island, Hudson Valley, New Jersey, and Connecticut data
 
 - `public/long-island-schools.json` includes Nassau and Suffolk public elementary schools from NCES 2024–25, with grades 3–5 ELA and math proficiency matched to published NYSED 2024–25 report cards where possible. Missing or suppressed scores remain unavailable.
-- `public/hudson-valley-schools.json` includes Dutchess, Putnam, and Ulster public elementary schools using the same NCES and NYSED sources and score matching. Its district boundaries are generalized NCES 2024–25 polygons.
+- `public/hudson-valley-schools.json` includes Dutchess, Orange, Putnam, Rockland, Sullivan, and Ulster public elementary schools using the same NCES and NYSED sources and score matching. Its district boundaries combine generalized NCES 2024–25 polygons for the original three counties with [NYS GIS school district polygons](https://gisservices.its.ny.gov/arcgis/rest/services/NYS_Schools/MapServer/18) for Orange, Rockland, and Sullivan.
 - `public/new-jersey-schools.json` includes Bergen, Hudson, Essex, Union, Passaic, and Middlesex counties. `public/connecticut-schools.json` includes the Western Connecticut and Greater Bridgeport planning regions. Connecticut's planning regions replaced counties in the federal 2024–25 data; together those two regions cover the southwest Connecticut area near former Fairfield County.
 - Each map includes generalized 2024–25 NCES district boundaries. The New Jersey map combines published 2024–25 NJSLA grades 3–5 Levels 4 and 5 into a proficiency rate where the data are available (650 of 797 schools). The Connecticut map shows the 2024–25 CSDE ELA and math performance index where available (145 of 157 schools). Connecticut's index is a 0–100 measure across a school's tested grades, **not** a proficiency percentage; the maps label it separately.
 - Refresh with `python3 scripts/build_metro_json.py`. Pass `long-island`, `hudson-valley`, `new-jersey`, or `connecticut` to refresh just one region. Sources: [NCES schools](https://nces.ed.gov/opengis/rest/services/K12_School_Locations/EDGE_ADMINDATA_PUBLICSCH_2425/MapServer/1), [NCES district boundaries](https://nces.ed.gov/opengis/rest/services/School_District_Boundaries/EDGE_ADMINDATA_SCHOOLDISTRICTS_SY2425/MapServer/1), [NYSED report cards](https://data.nysed.gov/downloads.php), [NJDOE NJSLA results](https://www.nj.gov/education/assessment/results/reports/2425/index.shtml), and [CSDE accountability data](https://data.ct.gov/Education/Next-Generation-Accountability-System/h28j-iix5).
+
+### Middle and high school data
+
+- The 12 `public/middle-*-schools.json` and `public/high-*-schools.json` files cover the six locations in the selector. Schools with students in grades 6–8 appear on the middle maps; schools with students in grades 9–12 appear on the high maps. A school serving both ranges appears on both.
+- The [NCES 2024–25 CCD school directory](https://nces.ed.gov/ccd/files.asp) provides school names and grade spans, the [CCD membership file](https://nces.ed.gov/ccd/files.asp) provides schoolwide enrollment and race/ethnicity counts, and [EDGE school geocodes](https://nces.ed.gov/programs/edge/Geographic/SchoolLocations) provide coordinates and county or planning-region assignments. Enrollment and demographics are for each whole school, including grades outside the selected range at combined schools.
+- Middle and high maps currently show school and demographic data. State assessment and graduation metrics are not yet included because the available measures differ by grade and state.
+- Rebuild all 12 files with `python3 scripts/build_secondary_json.py`. The builder downloads the official NCES archives into `/tmp` or reuses archives in a directory passed with `--source-dir`. Pass region names to rebuild only those maps. Run `python3 scripts/build_secondary_json.py --extend-hudson-valley hudson-valley` to add Orange, Rockland, and Sullivan to the elementary map with NYSED scores and NYS GIS district polygons when the NCES map service is unavailable.
 
 Refresh the checked-in JSON from the official sources:
 

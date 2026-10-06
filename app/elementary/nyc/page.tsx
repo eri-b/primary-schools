@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
-import Link from 'next/link';
-import { ChevronDown, GraduationCap, MapPin, Search } from 'lucide-react';
+import { ChevronDown, MapPin, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
+import { SchoolMapHeader } from '@/components/school-map-header';
 import {
   NativeSelect,
   NativeSelectOption,
@@ -644,23 +644,7 @@ export default function Home() {
   return (
     <main className="map-shell">
       <aside className="control-panel">
-        <nav className="region-nav" aria-label="Choose region">
-          <Link href="/elementary/nyc" aria-current="page">NYC</Link>
-          <Link href="/elementary/westchester">Westchester</Link>
-          <Link href="/elementary/long-island">Long Island</Link>
-          <Link href="/elementary/hudson-valley">Hudson Valley</Link>
-          <Link href="/elementary/new-jersey">New Jersey</Link>
-          <Link href="/elementary/connecticut">Connecticut</Link>
-        </nav>
-        <div className="brand-row">
-          <span className="brand-mark" aria-hidden="true">
-            <GraduationCap size={22} strokeWidth={2.2} />
-          </span>
-          <div>
-            <p className="eyebrow">2025–26 school year</p>
-            <h1>NYC elementary schools</h1>
-          </div>
-        </div>
+        <SchoolMapHeader current="nyc" schoolYear="2025–26" />
 
         <p className="intro">Select a dot for school info.</p>
 

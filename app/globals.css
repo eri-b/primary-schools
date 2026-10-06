@@ -73,28 +73,31 @@ select {
   background: #f8fafb;
   box-shadow: 8px 0 28px rgb(16 42 67 / 8%);
 }
-.region-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 22px;
+.school-controls {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
 }
-.region-nav a {
-  padding: 7px 11px;
-  border: 1px solid #cbd7dd;
+.school-control {
+  display: grid;
+  gap: 6px;
+}
+.school-control label {
   color: #334e68;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 750;
-  text-decoration: none;
 }
-.region-nav a[aria-current='page'] {
-  border-color: #102a43;
-  background: #102a43;
-  color: #fff;
+.school-control-select {
+  width: 100%;
 }
-.region-nav a:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+.school-control-select select {
+  height: 42px;
+  border-color: #cbd7dd;
+  border-radius: 0;
+  background: #fff;
+  color: #102a43;
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 .brand-row {
   display: flex;

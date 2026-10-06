@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Elementary School Maps',
-  description: 'Explore public elementary schools and district boundaries across New York City, Westchester, Long Island, and nearby New Jersey and Connecticut.',
+  title: 'NYC Metro Schools',
+  description: 'Explore public elementary, middle, and high schools across New York City, Westchester, Long Island, the Hudson Valley, New Jersey, and Connecticut.',
 };
 
 export default function RootLayout({
