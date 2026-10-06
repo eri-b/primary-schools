@@ -484,7 +484,7 @@ h1 {
 }
 .leaflet-popup-content {
   margin: 0;
-  width: auto !important;
+  width: min(420px, calc(100vw - 64px)) !important;
 }
 .school-popup {
   position: relative;
