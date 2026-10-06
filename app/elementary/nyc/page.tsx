@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
-import Link from 'next/link';
 import { ChevronDown, GraduationCap, MapPin, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
+import { RegionNav } from '@/components/region-nav';
 import {
   NativeSelect,
   NativeSelectOption,
@@ -644,14 +644,7 @@ export default function Home() {
   return (
     <main className="map-shell">
       <aside className="control-panel">
-        <nav className="region-nav" aria-label="Choose region">
-          <Link href="/elementary/nyc" aria-current="page">NYC</Link>
-          <Link href="/elementary/westchester">Westchester</Link>
-          <Link href="/elementary/long-island">Long Island</Link>
-          <Link href="/elementary/hudson-valley">Hudson Valley</Link>
-          <Link href="/elementary/new-jersey">New Jersey</Link>
-          <Link href="/elementary/connecticut">Connecticut</Link>
-        </nav>
+        <RegionNav current="nyc" />
         <div className="brand-row">
           <span className="brand-mark" aria-hidden="true">
             <GraduationCap size={22} strokeWidth={2.2} />

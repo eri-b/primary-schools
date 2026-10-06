@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
-import Link from 'next/link';
 import { ChevronDown, GraduationCap, MapPin, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
+import { RegionNav } from '@/components/region-nav';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 
 type Result = { tested: number | null; proficient: number | null; index?: number | null; level4: number | null; grades: string[] } | null;
@@ -207,7 +207,7 @@ export function RegionMap({ region }: { region: Region }) {
 
   return <main className="map-shell">
     <aside className="control-panel">
-      <nav className="region-nav" aria-label="Choose region"><Link href="/elementary/nyc">NYC</Link><Link href="/elementary/westchester">Westchester</Link><Link href="/elementary/long-island" aria-current={region === 'long-island' ? 'page' : undefined}>Long Island</Link><Link href="/elementary/hudson-valley" aria-current={region === 'hudson-valley' ? 'page' : undefined}>Hudson Valley</Link><Link href="/elementary/new-jersey" aria-current={region === 'new-jersey' ? 'page' : undefined}>New Jersey</Link><Link href="/elementary/connecticut" aria-current={region === 'connecticut' ? 'page' : undefined}>Connecticut</Link></nav>
+      <RegionNav current={region} />
       <div className="brand-row"><span className="brand-mark" aria-hidden="true"><GraduationCap size={22} strokeWidth={2.2} /></span><div><p className="eyebrow">2024–25 school year</p><h1>{config.title}</h1></div></div>
       <p className="intro">Select a dot for school info.</p>
       <div className="filters"><label htmlFor="region-search">School, city, county, or district</label><div className="search-wrap"><Search size={18} aria-hidden="true" /><Input id="region-search" type="search" placeholder={config.placeholder} value={query} onChange={(event) => setQuery(event.target.value)} className="h-11 rounded-none border-slate-300 bg-white pl-10 text-base shadow-none focus-visible:ring-2" /></div>
