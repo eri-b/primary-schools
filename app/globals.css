@@ -326,6 +326,32 @@ h1 {
   color: #496273;
   font-size: 0.84rem;
 }
+.dot-metric-control {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+}
+.dot-metric-control label {
+  color: #102a43;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+.dot-metric-control [data-slot='native-select'] {
+  height: 44px;
+  border-radius: 0;
+  background: #fff;
+}
+.dot-metric-control p,
+.legend small {
+  margin: 0;
+  color: #607784;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+.popup-map-metric {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+}
 .legend p {
   margin: 0 0 2px;
   color: #102a43;
@@ -470,6 +496,42 @@ h1 {
 }
 .school-marker {
   filter: drop-shadow(0 1px 2px rgb(16 42 67 / 38%));
+}
+.shared-school-marker {
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #243f66;
+  box-shadow: 0 1px 5px rgb(16 42 67 / 40%);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.shared-school-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.shared-school-list > details {
+  border: 1px solid #dbe4e8;
+}
+.shared-school-list > details > summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.shared-school-list > details > summary strong {
+  white-space: nowrap;
+}
+.shared-school-list > details > .school-popup {
+  padding: 12px 10px 14px;
+  border-top: 1px solid #dbe4e8;
 }
 .leaflet-control-zoom a {
   border-radius: 0 !important;

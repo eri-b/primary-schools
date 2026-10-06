@@ -75,7 +75,7 @@ def directory(path, locations):
         rows = {}
         for row in csv.DictReader(stream):
             school_id = row["NCESSCH"]
-            if school_id not in locations or row["SCH_TYPE_TEXT"] != "Regular School" or row["SY_STATUS_TEXT"] != "Open":
+            if school_id not in locations or row["SY_STATUS_TEXT"] not in {"Open", "New", "Changed Boundary/Agency"}:
                 continue
             levels = [level for level, grades in GRADES.items()
                       if any(row.get(f"G_{grade}_OFFERED") == "Yes" for grade in grades)]
@@ -137,6 +137,7 @@ def membership(path, school_ids):
 def school_record(row, location, county, enrollment=None, demographics=None):
     return {
         "id": row["NCESSCH"], "name": row["SCH_NAME"].title(), "district": row["LEA_NAME"].title(),
+        "schoolType": row["SCH_TYPE_TEXT"],
         "county": county, "city": row["LCITY"].title(), "address": (row.get("LSTREET1") or "").title(),
         "grades": f'{row["GSLO"]}-{row["GSHI"]}', "enrollment": enrollment,
         "lat": location["lat"], "lng": location["lng"], "ela": None, "math": None,
@@ -285,6 +286,9 @@ def main():
             records.sort(key=lambda school: (school["county"], school["district"], school["name"]))
             PUBLIC.joinpath(f"{level}-{region}-schools.json").write_text(json.dumps(records, separators=(",", ":")) + "\n")
             print(f"{level} {region}: {len(records)} schools", flush=True)
+    if "nyc" in selected:
+        from add_nyc_secondary_outcomes import enrich
+        enrich(args.source_dir)
     if args.extend_hudson_valley:
         extend_hudson_valley(schools, locations, enrollment)
         extend_hudson_valley_boundaries()

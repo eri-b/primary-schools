@@ -2,6 +2,10 @@
 
 Interactive Leaflet maps of public elementary, middle, and high schools in New York City, Westchester, Long Island, Dutchess, Orange, Putnam, Rockland, Sullivan, Ulster, and nearby New Jersey and Connecticut. They include school search, district boundaries, and clickable school details. Elementary maps also show assessment scores where available.
 
+When several schools share the same mapped coordinates, a numbered marker opens a list of every school at that location. Search can still isolate an individual school.
+
+Use **Color dots by** to switch between available assessment results, high-school graduation outcomes, and schoolwide enrollment. The NYC elementary map also supports enrollment by grade. Count and graduation-rate ranges are calculated from the schools in that map, while assessment percentage and index colors use fixed ranges. Grade enrollment is the number of students in a grade, not average classroom size. The maps also recognize optional `acceptanceRate` (percentage) and `classSizeByGrade` (grade-to-average-size mapping) fields in school JSON and show those choices when values exist. The current source files do not include those measures. Demographics remain in school details, but are not dot-color options.
+
 ## Run locally
 
 Requirements:
@@ -74,10 +78,12 @@ npm run start
 
 ### Middle and high school data
 
-- The 12 `public/middle-*-schools.json` and `public/high-*-schools.json` files cover the six locations in the selector. Schools with students in grades 6–8 appear on the middle maps; schools with students in grades 9–12 appear on the high maps. A school serving both ranges appears on both.
+- The 12 `public/middle-*-schools.json` and `public/high-*-schools.json` files cover the six locations in the selector. Schools with students in grades 6–8 appear on the middle maps; schools with students in grades 9–12 appear on the high maps. A school serving both ranges appears on both. The maps include regular, career and technical, alternative, and special education public schools, including newly opened schools in the NCES directory.
 - The [NCES 2024–25 CCD school directory](https://nces.ed.gov/ccd/files.asp) provides school names and grade spans, the [CCD membership file](https://nces.ed.gov/ccd/files.asp) provides schoolwide enrollment and race/ethnicity counts, and [EDGE school geocodes](https://nces.ed.gov/programs/edge/Geographic/SchoolLocations) provide coordinates and county or planning-region assignments. Enrollment and demographics are for each whole school, including grades outside the selected range at combined schools.
-- Middle and high maps currently show school and demographic data. State assessment and graduation metrics are not yet included because the available measures differ by grade and state.
+- Middle and high maps include a school-type filter. The NYC middle map also colors dots by published 2026 grades 6–8 ELA/math proficiency, combining tested counts for each subject. The NYC high map colors dots by the class of 2025 four-year graduation rate or Regents diploma rate. Missing and suppressed outcomes remain unavailable; NYCPS has not yet published charter graduation results in the same file. Other regions currently show school and demographic data without secondary outcomes.
+- Selective admissions, magnet, honors, and other programs within a school are not separate school records in the NCES directory. The map shows the school, not each admissions program.
 - Rebuild all 12 files with `python3 scripts/build_secondary_json.py`. The builder downloads the official NCES archives into `/tmp` or reuses archives in a directory passed with `--source-dir`. Pass region names to rebuild only those maps. Run `python3 scripts/build_secondary_json.py --extend-hudson-valley hudson-valley` to add Orange, Rockland, and Sullivan to the elementary map with NYSED scores and NYS GIS district polygons when the NCES map service is unavailable.
+- When rebuilding NYC, the builder also fetches [NYCPS 2026 school ELA/math results](https://infohub.nyced.org/reports/academics/test-results) and [class of 2025 school graduation results](https://infohub.nyced.org/reports/academics/graduation-results). To refresh just those outcomes against existing NYC map files, run `python3 scripts/add_nyc_secondary_outcomes.py --source-dir /tmp` after the NCES directory archive is present.
 
 Refresh the checked-in JSON from the official sources:
 

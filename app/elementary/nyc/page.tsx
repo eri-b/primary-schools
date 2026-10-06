@@ -7,6 +7,8 @@ import { ChevronDown, MapPin, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
 import { SchoolMapHeader } from '@/components/school-map-header';
+import { DotMetricLegend } from '@/components/dot-metric-legend';
+import { metricBreaks, metricColor, metricText, type MetricScale } from '@/lib/map-metrics';
 import {
   NativeSelect,
   NativeSelectOption,
@@ -19,6 +21,8 @@ type School = {
   district: number;
   grades: string;
   enrollment: number;
+  acceptanceRate?: number | null;
+  classSizeByGrade?: Record<string, number | null>;
   elaTested: number;
   elaMeanScore: number | null;
   ela: number | null;
@@ -111,12 +115,13 @@ const BOROUGHS = [
 const DEFAULT_MAP_CENTER: [number, number] = [40.7128, -74.006];
 const DEFAULT_MAP_ZOOM = 11;
 
-function colorFor(score: number | null) {
-  if (score === null) return '#7b8790';
-  if (score >= 75) return '#087f5b';
-  if (score >= 55) return '#2f78a8';
-  if (score >= 35) return '#e39a22';
-  return '#c44a3d';
+type DotMetric = 'average' | 'enrollment' | 'acceptance' | `grade:${string}` | `class-size:${string}`;
+function dotValue(school: School, metric: DotMetric): number | null {
+  if (metric.startsWith('class-size:')) return school.classSizeByGrade?.[metric.slice(11)] ?? null;
+  if (metric === 'acceptance') return school.acceptanceRate ?? null;
+  if (metric.startsWith('grade:')) return school.details.gradeEnrollment.find(({ grade }) => grade === metric.slice(6))?.count ?? null;
+  if (metric === 'average') return school.average;
+  return school.enrollment;
 }
 
 function escapeHtml(value: string) {
@@ -406,11 +411,21 @@ export default function Home() {
   const [borough, setBorough] = useState('All boroughs');
   const [gtFilter, setGtFilter] = useState<GiftedTalentedFilter>('All schools');
   const [only3K, setOnly3K] = useState(false);
+  const [dotMetric, setDotMetric] = useState<DotMetric>('average');
   const [showDistricts, setShowDistricts] = useState(true);
   const [showZones, setShowZones] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [boundaryError, setBoundaryError] = useState(false);
+  const gradeOptions = useMemo(() => [...new Set(schools.flatMap((school) => school.details.gradeEnrollment.map(({ grade }) => grade)))].sort((a, b) => {
+    const order = ['3K', 'PK', 'K', 'KG', '1', '2', '3', '4', '5', '6', '7', '8'];
+    return order.indexOf(a) - order.indexOf(b);
+  }), [schools]);
+  const hasAcceptance = schools.some((school) => school.acceptanceRate != null);
+  const classSizeGrades = useMemo(() => [...new Set(schools.flatMap((school) => Object.entries(school.classSizeByGrade ?? {}).filter(([, value]) => value != null).map(([grade]) => grade)))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [schools]);
+  const dotScale: MetricScale = dotMetric === 'average' || dotMetric === 'acceptance' ? 'percent' : 'count';
+  const dotLabel = dotMetric === 'average' ? 'Average proficiency' : dotMetric === 'enrollment' ? 'Schoolwide enrollment' : dotMetric === 'acceptance' ? 'Acceptance rate' : dotMetric.startsWith('class-size:') ? `Grade ${dotMetric.slice(11)} average class size` : `${dotMetric.slice(6)} enrollment`;
+  const breaks = useMemo(() => metricBreaks(schools.map((school) => dotValue(school, dotMetric)), dotScale), [schools, dotMetric, dotScale]);
 
   const filteredSchools = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -617,10 +632,10 @@ export default function Home() {
         radius: 6.5,
         color: '#ffffff',
         weight: 2,
-        fillColor: colorFor(school.average),
+        fillColor: metricColor(dotValue(school, dotMetric), breaks),
         fillOpacity: 0.96,
       });
-      marker.bindTooltip(school.name, { direction: 'top', offset: [0, -5] });
+      marker.bindTooltip(`${escapeHtml(school.name)}<br>${escapeHtml(dotLabel)}: ${metricText(dotValue(school, dotMetric), dotScale)}`, { direction: 'top', offset: [0, -5] });
       marker.bindPopup(popupFor(school), {
         minWidth: 300,
         maxWidth: 360,
@@ -639,7 +654,7 @@ export default function Home() {
         });
       }
     }
-  }, [filteredSchools, mapReady, query, schools.length]);
+  }, [filteredSchools, mapReady, query, schools.length, dotMetric, breaks, dotLabel, dotScale]);
 
   return (
     <main className="map-shell">
@@ -728,6 +743,8 @@ export default function Home() {
           </span>
         </div>
 
+        <div className="dot-metric-control"><label htmlFor="nyc-dot-metric">Color dots by</label><NativeSelect id="nyc-dot-metric" className="w-full" value={dotMetric} onChange={(event) => setDotMetric(event.target.value as DotMetric)}><NativeSelectOption value="average">Average proficiency</NativeSelectOption><NativeSelectOption value="enrollment">Schoolwide enrollment</NativeSelectOption>{gradeOptions.map((grade) => <NativeSelectOption key={grade} value={`grade:${grade}`}>{grade} enrollment</NativeSelectOption>)}{hasAcceptance && <NativeSelectOption value="acceptance">Acceptance rate</NativeSelectOption>}{classSizeGrades.map((grade) => <NativeSelectOption key={grade} value={`class-size:${grade}`}>Grade {grade} average class size</NativeSelectOption>)}</NativeSelect><p>Grade enrollment counts students in a grade, not classroom size.</p></div>
+
         <fieldset className="layer-controls">
           <legend>Boundary layers</legend>
           <label htmlFor="district-layer-toggle">
@@ -774,29 +791,7 @@ export default function Home() {
           )}
         </fieldset>
 
-        <div className="legend" aria-label="Average proficiency color legend">
-          <p>Average proficiency</p>
-          <div>
-            <span className="dot high" />
-            75% or more
-          </div>
-          <div>
-            <span className="dot upper" />
-            55–74.9%
-          </div>
-          <div>
-            <span className="dot middle" />
-            35–54.9%
-          </div>
-          <div>
-            <span className="dot lower" />
-            Below 35%
-          </div>
-          <div>
-            <span className="dot unavailable" />
-            Suppressed
-          </div>
-        </div>
+        <DotMetricLegend label={dotLabel} breaks={breaks} scale={dotScale} />
 
         <DataSourcesFooter>
           <p>
