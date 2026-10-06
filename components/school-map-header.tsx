@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { GraduationCap } from 'lucide-react';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 
@@ -17,8 +16,6 @@ type Location = (typeof locations)[number]['slug'];
 type SchoolLevel = 'elementary' | 'middle' | 'high';
 
 export function SchoolMapHeader({ current, schoolYear, level = 'elementary' }: { current: Location; schoolYear: string; level?: SchoolLevel }) {
-  const router = useRouter();
-
   return (
     <header className="school-map-header">
       <div className="brand-row">
@@ -35,7 +32,7 @@ export function SchoolMapHeader({ current, schoolYear, level = 'elementary' }: {
             id="location-select"
             className="school-control-select"
             value={current}
-            onChange={(event) => router.push(`/${level}/${event.target.value}`)}
+            onChange={(event) => window.location.assign(`/${level}/${event.target.value}`)}
           >
             {locations.map(({ slug, name }) => (
               <NativeSelectOption key={slug} value={slug}>{name}</NativeSelectOption>
@@ -44,7 +41,7 @@ export function SchoolMapHeader({ current, schoolYear, level = 'elementary' }: {
         </div>
         <div className="school-control">
           <label htmlFor="school-level-select">School level</label>
-          <NativeSelect id="school-level-select" className="school-control-select" value={level} onChange={(event) => router.push(`/${event.target.value}/${current}`)}>
+          <NativeSelect id="school-level-select" className="school-control-select" value={level} onChange={(event) => window.location.assign(`/${event.target.value}/${current}`)}>
             <NativeSelectOption value="elementary">Elementary</NativeSelectOption>
             <NativeSelectOption value="middle">Middle</NativeSelectOption>
             <NativeSelectOption value="high">High</NativeSelectOption>
