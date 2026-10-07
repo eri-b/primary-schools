@@ -252,7 +252,14 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
           .bindTooltip(`${escapeHtml(school.name)}<br>${escapeHtml(dotLabel)}: ${metricText(dotValue(school, effectiveMetric), dotScale)}`, { direction: 'top', offset: [0, -5] })
           .bindPopup(popupFor(school, region, level, dotLabel, effectiveMetric, dotScale), { minWidth: 300, maxWidth: 360, maxHeight: 520 }).addTo(layer);
       } else {
-        L.marker(point, { pane: 'schools', icon: L.divIcon({ className: 'shared-school-marker', html: `<span>${group.length}</span>`, iconSize: [27, 27], iconAnchor: [13.5, 13.5] }) })
+        const dots = group.map((item, index) => {
+          const angle = -Math.PI / 2 + (2 * Math.PI * index) / group.length;
+          const radius = 4 + group.length;
+          const x = 20 + Math.cos(angle) * radius;
+          const y = 20 + Math.sin(angle) * radius;
+          return `<span class="shared-school-dot" style="left:${x}px;top:${y}px;background-color:${metricColor(dotValue(item, effectiveMetric), breaks)}"></span>`;
+        }).join('');
+        L.marker(point, { pane: 'schools', title: `${group.length} schools at this location`, icon: L.divIcon({ className: 'shared-school-marker', html: dots, iconSize: [40, 40], iconAnchor: [20, 20] }) })
           .bindTooltip(`${group.length} schools at this location<br>${group.map((item) => escapeHtml(item.name)).join('<br>')}`, { direction: 'top', offset: [0, -12] })
           .bindPopup(sharedLocationPopup(group, region, level, dotLabel, effectiveMetric, dotScale), { minWidth: 320, maxWidth: 400, maxHeight: 520 }).addTo(layer);
       }
