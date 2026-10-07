@@ -10,6 +10,7 @@ import { SchoolMapHeader } from '@/components/school-map-header';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { DotMetricLegend } from '@/components/dot-metric-legend';
 import { metricBreaks, metricColor, metricText, type MetricScale } from '@/lib/map-metrics';
+import { gradeMatchesLevel, type SchoolLevel } from '@/lib/school-grades';
 
 type Result = { tested: number | null; proficient: number | null; index?: number | null; level4: number | null; grades: string[] } | null;
 type School = {
@@ -35,7 +36,7 @@ type School = {
 };
 
 export type Region = 'nyc' | 'westchester' | 'long-island' | 'hudson-valley' | 'new-jersey' | 'connecticut';
-export type SchoolLevel = 'elementary' | 'middle' | 'high';
+export type { SchoolLevel } from '@/lib/school-grades';
 const CONFIG = {
   nyc: { title: 'NYC elementary schools', center: [40.73, -73.94] as [number, number], zoom: 11, placeholder: 'Try Brooklyn or Queens', scores: false },
   westchester: { title: 'Westchester elementary schools', center: [41.12, -73.78] as [number, number], zoom: 10, placeholder: 'Try Yonkers or White Plains', scores: false },
@@ -160,7 +161,7 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
   const countyNames = useMemo(() => ['All counties', ...new Set(schools.map((school) => school.county))], [schools]);
   const schoolTypeNames = useMemo(() => ['All school types', ...new Set(schools.map((school) => school.schoolType).filter((type): type is string => Boolean(type)))].sort((a, b) => a === 'All school types' ? -1 : b === 'All school types' ? 1 : a === 'Regular School' ? -1 : b === 'Regular School' ? 1 : a.localeCompare(b)), [schools]);
   const hasAcceptance = schools.some((school) => school.acceptanceRate != null);
-  const classSizeGrades = useMemo(() => [...new Set(schools.flatMap((school) => Object.entries(school.classSizeByGrade ?? {}).filter(([, value]) => value != null).map(([grade]) => grade)))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [schools]);
+  const classSizeGrades = useMemo(() => [...new Set(schools.flatMap((school) => Object.entries(school.classSizeByGrade ?? {}).filter(([grade, value]) => value != null && gradeMatchesLevel(grade, level)).map(([grade]) => grade)))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [schools, level]);
   const effectiveMetric = dotMetric === 'assessment' && !hasScores ? 'enrollment' : dotMetric;
   const dotScale: MetricScale = effectiveMetric === 'enrollment' || effectiveMetric.startsWith('class-size:') ? 'count' : effectiveMetric === 'assessment' && region === 'connecticut' ? 'index' : 'percent';
   const dotLabel = effectiveMetric === 'assessment' ? `Average ${region === 'connecticut' ? 'performance index' : 'proficiency'}` : effectiveMetric === 'ela' ? 'ELA proficiency' : effectiveMetric === 'math' ? 'Math proficiency' : effectiveMetric === 'graduation' ? 'Four-year graduation rate' : effectiveMetric === 'regents' ? 'Regents diploma rate' : effectiveMetric === 'enrollment' ? 'Schoolwide enrollment' : effectiveMetric === 'acceptance' ? 'Acceptance rate' : `Grade ${effectiveMetric.slice(11)} average class size`;

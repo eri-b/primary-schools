@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
+import { schoolMapTitle } from '@/lib/map-title';
 
 export const metadata: Metadata = {
-  title: 'New Jersey Elementary Schools',
+  title: schoolMapTitle('new-jersey', 'elementary'),
   description: 'Explore public elementary schools in nearby New Jersey counties.',
 };
 

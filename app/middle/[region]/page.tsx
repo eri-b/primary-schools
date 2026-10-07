@@ -1,10 +1,17 @@
+import type { Metadata } from 'next';
 import { permanentRedirect } from 'next/navigation';
 import { RegionMap, type Region } from '@/components/region-map';
+import { schoolMapTitle } from '@/lib/map-title';
 
 const regions: Region[] = ['nyc', 'westchester', 'long-island', 'hudson-valley', 'new-jersey', 'connecticut'];
 
 export function generateStaticParams() {
   return regions.map((region) => ({ region }));
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ region: string }> }): Promise<Metadata> {
+  const { region } = await params;
+  return { title: regions.includes(region as Region) ? schoolMapTitle(region as Region, 'middle') : 'School Sampler' };
 }
 
 export default async function MiddleRegion({ params }: { params: Promise<{ region: string }> }) {

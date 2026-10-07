@@ -9,6 +9,7 @@ import { DataSourcesFooter } from '@/components/data-sources-footer';
 import { SchoolMapHeader } from '@/components/school-map-header';
 import { DotMetricLegend } from '@/components/dot-metric-legend';
 import { metricBreaks, metricColor, metricText, type MetricScale } from '@/lib/map-metrics';
+import { gradeMatchesLevel } from '@/lib/school-grades';
 import {
   NativeSelect,
   NativeSelectOption,
@@ -417,12 +418,12 @@ export default function Home() {
   const [mapReady, setMapReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [boundaryError, setBoundaryError] = useState(false);
-  const gradeOptions = useMemo(() => [...new Set(schools.flatMap((school) => school.details.gradeEnrollment.map(({ grade }) => grade)))].sort((a, b) => {
-    const order = ['3K', 'PK', 'K', 'KG', '1', '2', '3', '4', '5', '6', '7', '8'];
+  const gradeOptions = useMemo(() => [...new Set(schools.flatMap((school) => school.details.gradeEnrollment.map(({ grade }) => grade).filter((grade) => gradeMatchesLevel(grade, 'elementary'))))].sort((a, b) => {
+    const order = ['3K', 'PK', 'K', 'KG', '1', '2', '3', '4', '5'];
     return order.indexOf(a) - order.indexOf(b);
   }), [schools]);
   const hasAcceptance = schools.some((school) => school.acceptanceRate != null);
-  const classSizeGrades = useMemo(() => [...new Set(schools.flatMap((school) => Object.entries(school.classSizeByGrade ?? {}).filter(([, value]) => value != null).map(([grade]) => grade)))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [schools]);
+  const classSizeGrades = useMemo(() => [...new Set(schools.flatMap((school) => Object.entries(school.classSizeByGrade ?? {}).filter(([grade, value]) => value != null && gradeMatchesLevel(grade, 'elementary')).map(([grade]) => grade)))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [schools]);
   const dotScale: MetricScale = dotMetric === 'average' || dotMetric === 'acceptance' ? 'percent' : 'count';
   const dotLabel = dotMetric === 'average' ? 'Average proficiency' : dotMetric === 'enrollment' ? 'Schoolwide enrollment' : dotMetric === 'acceptance' ? 'Acceptance rate' : dotMetric.startsWith('class-size:') ? `Grade ${dotMetric.slice(11)} average class size` : `${dotMetric.slice(6)} enrollment`;
   const breaks = useMemo(() => metricBreaks(schools.map((school) => dotValue(school, dotMetric)), dotScale), [schools, dotMetric, dotScale]);

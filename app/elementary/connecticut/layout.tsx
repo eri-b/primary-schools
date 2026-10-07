@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
+import { schoolMapTitle } from '@/lib/map-title';
 
 export const metadata: Metadata = {
-  title: 'Southwest Connecticut Elementary Schools',
+  title: schoolMapTitle('connecticut', 'elementary'),
   description: 'Explore public elementary schools, districts, demographics, and 2024–25 performance indexes in southwestern Connecticut planning regions.',
 };
 

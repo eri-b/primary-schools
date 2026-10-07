@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
+import { schoolMapTitle } from '@/lib/map-title';
 
 export const metadata: Metadata = {
-  title: 'Westchester Elementary Schools',
+  title: schoolMapTitle('westchester', 'elementary'),
   description: 'Explore Westchester County public elementary schools, school districts, historical attendance zones, and 2024–25 assessment results.',
 };
 

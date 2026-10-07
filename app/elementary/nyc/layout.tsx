@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
+import { schoolMapTitle } from '@/lib/map-title';
 
 export const metadata: Metadata = {
-  title: 'NYC Elementary Schools',
+  title: schoolMapTitle('nyc', 'elementary'),
   description: 'Explore New York City public elementary schools, zones, districts, and 2026 assessment results.',
 };
 

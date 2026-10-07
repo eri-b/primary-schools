@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'NYC Metro High Schools',
+  title: 'School Sampler',
   description: 'Explore 2024–25 public high schools, grade spans, enrollment, and district boundaries across the NYC metro area.',
 };
 

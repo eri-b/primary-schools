@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'NYC Metro Schools',
+  title: 'School Sampler',
   description: 'Explore public elementary, middle, and high schools across New York City, Westchester, Long Island, the Hudson Valley, New Jersey, and Connecticut.',
 };
 
