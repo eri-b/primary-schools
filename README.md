@@ -1,6 +1,6 @@
 # NYC Metro School Maps
 
-Live production app: [thirdbr.com](https://thirdbr.com).
+Live production app: [schoolsampler.com](https://schoolsampler.com).
 
 Interactive Leaflet maps of public elementary, middle, and high schools in New York City, Westchester, Long Island, Dutchess, Orange, Putnam, Rockland, Sullivan, Ulster, and nearby New Jersey and Connecticut. They include school search, district boundaries, and clickable school details. Elementary maps also show assessment scores where available.
 
