@@ -15,6 +15,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from add_school_sectors import enrich as enrich_school_sectors
+
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "public"
@@ -188,6 +190,7 @@ def main():
             "ela": ela, "math": math, "average": average, "demographics": demographics,
             "reportUrl": result.get("url"),
         })
+    enrich_school_sectors(schools)
     schools.sort(key=lambda school: (school["district"], school["name"]))
     PUBLIC.joinpath("westchester-schools.json").write_text(json.dumps(schools, separators=(",", ":")) + "\n")
 

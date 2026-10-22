@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
 import { ChevronDown, MapPin, Search } from 'lucide-react';
+import { SchoolSectorFilter, matchesSchoolSector, type SchoolSector } from '@/components/school-sector-filter';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
 import { SchoolMapHeader } from '@/components/school-map-header';
@@ -14,6 +15,7 @@ import { gradeMatchesLevel, type SchoolLevel } from '@/lib/school-grades';
 
 type Result = { tested: number | null; proficient: number | null; index?: number | null; level4: number | null; grades: string[] } | null;
 type School = {
+  isCharter: boolean | null;
   id: string;
   name: string;
   schoolType?: string;
@@ -147,6 +149,7 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
   const [schools, setSchools] = useState<School[]>([]);
   const [districts, setDistricts] = useState<GeoJsonObject | null>(null);
   const [query, setQuery] = useState('');
+  const [schoolSector, setSchoolSector] = useState<SchoolSector>('all');
   const [district, setDistrict] = useState('All districts');
   const [county, setCounty] = useState('All counties');
   const [schoolType, setSchoolType] = useState('All school types');
@@ -170,12 +173,13 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
   const filteredSchools = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return schools.filter((school) =>
+      matchesSchoolSector(school.isCharter, schoolSector) &&
       (district === 'All districts' || school.district === district) &&
       (county === 'All counties' || school.county === county) &&
       (level === 'elementary' || schoolType === 'All school types' || school.schoolType === schoolType) &&
       (!(hasScores || hasGraduation) || !onlyScored || dotValue(school, effectiveMetric) !== null) &&
       (!needle || `${school.name} ${school.city} ${school.district} ${school.county}`.toLowerCase().includes(needle)));
-  }, [schools, county, district, schoolType, level, hasScores, hasGraduation, onlyScored, effectiveMetric, query]);
+  }, [schoolSector, schools, county, district, schoolType, level, hasScores, hasGraduation, onlyScored, effectiveMetric, query]);
 
   useEffect(() => {
     let cancelled = false;
@@ -266,19 +270,19 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
       }
       bounds.push(point);
     }
-    const filterKey = `${query}\n${county}\n${district}\n${schoolType}`;
+    const filterKey = `${query}\n${county}\n${district}\n${schoolType}\n${schoolSector}`;
     if (schools.length && filterKey !== lastSearchRef.current) {
       lastSearchRef.current = filterKey;
       if ((query || county !== 'All counties' || district !== 'All districts' || schoolType !== 'All school types') && bounds.length) map.fitBounds(bounds, { padding: [36, 36], maxZoom: bounds.length === 1 ? 14 : 13 });
     }
-  }, [breaks, county, district, schoolType, filteredSchools, mapReady, query, region, level, schools.length, effectiveMetric, dotLabel, dotScale]);
+  }, [breaks, county, district, schoolType, schoolSector, filteredSchools, mapReady, query, region, level, schools.length, effectiveMetric, dotLabel, dotScale]);
 
   return <main className="map-shell">
     <aside className="control-panel">
       <SchoolMapHeader current={region} schoolYear="2024–25" level={level} />
       <p className="intro">Select a dot for school info. Numbered dots contain schools that share a location.</p>
       <div className="filters"><label htmlFor="region-search">School, city, county, or district</label><div className="search-wrap"><Search size={18} aria-hidden="true" /><Input id="region-search" type="search" placeholder={config.placeholder} value={query} onChange={(event) => setQuery(event.target.value)} className="h-11 rounded-none border-slate-300 bg-white pl-10 text-base shadow-none focus-visible:ring-2" /></div>
-        <details className="filter-section"><summary><span>Filters{(county !== 'All counties' || district !== 'All districts' || schoolType !== 'All school types' || onlyScored) ? ' (active)' : ''}</span><ChevronDown size={17} aria-hidden="true" /></summary><div className="filter-grid"><div className="filter-control"><label htmlFor="county-filter">County / region</label><NativeSelect id="county-filter" className="w-full" value={county} onChange={(event) => { setCounty(event.target.value); setDistrict('All districts'); }}>{countyNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div><div className="filter-control"><label htmlFor="district-filter">District</label><NativeSelect id="district-filter" className="w-full" value={district} onChange={(event) => setDistrict(event.target.value)}>{districtNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div>{level !== 'elementary' && <div className="filter-control"><label htmlFor="school-type-filter">School type</label><NativeSelect id="school-type-filter" className="w-full" value={schoolType} onChange={(event) => setSchoolType(event.target.value)}>{schoolTypeNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div>}{(hasScores || hasGraduation) && <label className="filter-checkbox"><input type="checkbox" checked={onlyScored} onChange={(event) => setOnlyScored(event.target.checked)} />Has selected result</label>}</div></details>
+        <details className="filter-section"><summary><span>Filters{(county !== 'All counties' || district !== 'All districts' || schoolType !== 'All school types' || schoolSector !== 'all' || onlyScored) ? ' (active)' : ''}</span><ChevronDown size={17} aria-hidden="true" /></summary><div className="filter-grid"><SchoolSectorFilter value={schoolSector} onChange={setSchoolSector} /><div className="filter-control"><label htmlFor="county-filter">County / region</label><NativeSelect id="county-filter" className="w-full" value={county} onChange={(event) => { setCounty(event.target.value); setDistrict('All districts'); }}>{countyNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div><div className="filter-control"><label htmlFor="district-filter">District</label><NativeSelect id="district-filter" className="w-full" value={district} onChange={(event) => setDistrict(event.target.value)}>{districtNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div>{level !== 'elementary' && <div className="filter-control"><label htmlFor="school-type-filter">School type</label><NativeSelect id="school-type-filter" className="w-full" value={schoolType} onChange={(event) => setSchoolType(event.target.value)}>{schoolTypeNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div>}{(hasScores || hasGraduation) && <label className="filter-checkbox"><input type="checkbox" checked={onlyScored} onChange={(event) => setOnlyScored(event.target.checked)} />Has selected result</label>}</div></details>
       </div>
       <div className="result-count" aria-live="polite"><MapPin size={17} aria-hidden="true" /><strong>{filteredSchools.length.toLocaleString()}</strong><span>{filteredSchools.length === 1 ? 'school shown' : 'schools shown'}</span></div>
       <div className="dot-metric-control"><label htmlFor="region-dot-metric">Color dots by</label><NativeSelect id="region-dot-metric" className="w-full" value={effectiveMetric} onChange={(event) => setDotMetric(event.target.value as DotMetric)}>{hasScores && <NativeSelectOption value="assessment">Average ELA and math proficiency</NativeSelectOption>}{level === 'middle' && region === 'nyc' && <><NativeSelectOption value="ela">ELA proficiency</NativeSelectOption><NativeSelectOption value="math">Math proficiency</NativeSelectOption></>}{hasGraduation && <><NativeSelectOption value="graduation">Four-year graduation rate</NativeSelectOption><NativeSelectOption value="regents">Regents diploma rate</NativeSelectOption></>}<NativeSelectOption value="enrollment">Schoolwide enrollment</NativeSelectOption>{hasAcceptance && <NativeSelectOption value="acceptance">Acceptance rate</NativeSelectOption>}{classSizeGrades.map((grade) => <NativeSelectOption key={grade} value={`class-size:${grade}`}>Grade {grade} average class size</NativeSelectOption>)}</NativeSelect></div>

@@ -18,6 +18,8 @@ import zipfile
 from collections import defaultdict
 from pathlib import Path
 
+from add_school_sectors import enrich as enrich_school_sectors
+
 from build_westchester_json import (
     NCES, NYSED, api_url, fetch, normalize, normalize_district,
     report_counts, round_coordinates, school_links,
@@ -275,6 +277,7 @@ def build_region(region, counties):
     school_items = [row for _, row in rows]
     scores = match_scores(school_items, counties) if region in ("long-island", "hudson-valley") else match_nj_scores(school_items) if region == "new-jersey" else match_ct_scores(school_items)
     schools = [school_record(row, county, scores.get(row["NCESSCH"], {}), region) for county, row in rows]
+    enrich_school_sectors(schools)
     schools.sort(key=lambda item: (item["county"], item["district"], item["name"]))
     PUBLIC.joinpath(f"{region}-schools.json").write_text(json.dumps(schools, separators=(",", ":")) + "\n")
     boundaries = district_boundaries(counties.values())

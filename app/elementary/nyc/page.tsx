@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
 import { ChevronDown, MapPin, Search } from 'lucide-react';
+import { SchoolSectorFilter, matchesSchoolSector, type SchoolSector } from '@/components/school-sector-filter';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
 import { SchoolMapHeader } from '@/components/school-map-header';
@@ -16,6 +17,7 @@ import {
 } from '@/components/ui/native-select';
 
 type School = {
+  isCharter: boolean | null;
   dbn: string;
   name: string;
   borough: string;
@@ -409,6 +411,7 @@ export default function Home() {
   const [districts, setDistricts] = useState<GeoJsonObject | null>(null);
   const [zones, setZones] = useState<GeoJsonObject | null>(null);
   const [query, setQuery] = useState('');
+  const [schoolSector, setSchoolSector] = useState<SchoolSector>('all');
   const [borough, setBorough] = useState('All boroughs');
   const [gtFilter, setGtFilter] = useState<GiftedTalentedFilter>('All schools');
   const [only3K, setOnly3K] = useState(false);
@@ -446,12 +449,13 @@ export default function Home() {
         school.details.gradeEnrollment.some(
           ({ grade, count }) => grade === '3K' && count > 0,
         );
-      return matchesBorough && matchesQuery && matchesGt && matches3K;
+      return matchesSchoolSector(school.isCharter, schoolSector) && matchesBorough && matchesQuery && matchesGt && matches3K;
     });
-  }, [borough, gtFilter, only3K, query, schools]);
+  }, [borough, gtFilter, only3K, query, schools, schoolSector]);
 
   const activeFilterCount =
     Number(borough !== 'All boroughs') +
+    Number(schoolSector !== 'all') +
     Number(gtFilter !== 'All schools') +
     Number(only3K);
 
@@ -684,6 +688,7 @@ export default function Home() {
               <ChevronDown size={17} aria-hidden="true" />
             </summary>
             <div className="filter-grid">
+              <SchoolSectorFilter value={schoolSector} onChange={setSchoolSector} />
               <div className="filter-control">
                 <label htmlFor="borough-filter">Borough</label>
                 <NativeSelect
@@ -815,7 +820,7 @@ export default function Home() {
           <div className="map-message">Loading schools…</div>
         )}
         {schools.length > 0 && filteredSchools.length === 0 && (
-          <div className="empty-message">No schools match those filters.</div>
+          <div className="empty-message">{schoolSector === 'charter' ? 'The NYC elementary dataset currently covers district schools only; charter schools are not included.' : 'No schools match those filters.'}</div>
         )}
         <div
           ref={mapElementRef}

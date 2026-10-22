@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
 import { ChevronDown, MapPin, Search } from 'lucide-react';
+import { SchoolSectorFilter, matchesSchoolSector, type SchoolSector } from '@/components/school-sector-filter';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
 import { SchoolMapHeader } from '@/components/school-map-header';
@@ -11,6 +12,7 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 
 type Result = { tested: number; proficient: number | null; level4: number | null; grades: string[] } | null;
 type School = {
+  isCharter: boolean | null;
   id: string;
   name: string;
   district: string;
@@ -89,6 +91,7 @@ export default function WestchesterElementary() {
   const [districts, setDistricts] = useState<GeoJsonObject | null>(null);
   const [zones, setZones] = useState<GeoJsonObject | null>(null);
   const [query, setQuery] = useState('');
+  const [schoolSector, setSchoolSector] = useState<SchoolSector>('all');
   const [district, setDistrict] = useState('All districts');
   const [onlyScored, setOnlyScored] = useState(false);
   const [showDistricts, setShowDistricts] = useState(true);
@@ -101,10 +104,11 @@ export default function WestchesterElementary() {
   const filteredSchools = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return schools.filter((school) =>
+      matchesSchoolSector(school.isCharter, schoolSector) &&
       (district === 'All districts' || school.district === district) &&
       (!onlyScored || school.average !== null) &&
       (!needle || `${school.name} ${school.city} ${school.district}`.toLowerCase().includes(needle)));
-  }, [schools, district, onlyScored, query]);
+  }, [schoolSector, schools, district, onlyScored, query]);
 
   useEffect(() => {
     let cancelled = false;
@@ -208,7 +212,7 @@ export default function WestchesterElementary() {
       <SchoolMapHeader current="westchester" schoolYear="2024–25" />
       <p className="intro">Select a dot for school info.</p>
       <div className="filters"><label htmlFor="westchester-search">School, city, or district</label><div className="search-wrap"><Search size={18} aria-hidden="true" /><Input id="westchester-search" type="search" placeholder="Try Scarsdale or Concord Road" value={query} onChange={(event) => setQuery(event.target.value)} className="h-11 rounded-none border-slate-300 bg-white pl-10 text-base shadow-none focus-visible:ring-2" /></div>
-        <details className="filter-section"><summary><span>Filters{(district !== 'All districts' || onlyScored) ? ' (active)' : ''}</span><ChevronDown size={17} aria-hidden="true" /></summary><div className="filter-grid"><div className="filter-control"><label htmlFor="westchester-district-filter">District</label><NativeSelect id="westchester-district-filter" className="w-full" value={district} onChange={(event) => setDistrict(event.target.value)}>{districtNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div><label className="filter-checkbox"><input type="checkbox" checked={onlyScored} onChange={(event) => setOnlyScored(event.target.checked)} />Has ELA and math scores</label></div></details>
+        <details className="filter-section"><summary><span>Filters{(district !== 'All districts' || schoolSector !== 'all' || onlyScored) ? ' (active)' : ''}</span><ChevronDown size={17} aria-hidden="true" /></summary><div className="filter-grid"><SchoolSectorFilter value={schoolSector} onChange={setSchoolSector} /><div className="filter-control"><label htmlFor="westchester-district-filter">District</label><NativeSelect id="westchester-district-filter" className="w-full" value={district} onChange={(event) => setDistrict(event.target.value)}>{districtNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div><label className="filter-checkbox"><input type="checkbox" checked={onlyScored} onChange={(event) => setOnlyScored(event.target.checked)} />Has ELA and math scores</label></div></details>
       </div>
       <div className="result-count" aria-live="polite"><MapPin size={17} aria-hidden="true" /><strong>{filteredSchools.length.toLocaleString()}</strong><span>{filteredSchools.length === 1 ? 'school shown' : 'schools shown'}</span></div>
       <fieldset className="layer-controls"><legend>Boundary layers</legend><label htmlFor="westchester-district-layer"><span><i className="line-key district-key" />School districts</span><input id="westchester-district-layer" className="layer-toggle" type="checkbox" role="switch" checked={showDistricts} aria-checked={showDistricts} onChange={(event) => setShowDistricts(event.target.checked)} disabled={!districts} /></label><label htmlFor="westchester-zone-layer"><span><i className="line-key zone-key" />Historic elementary zones</span><input id="westchester-zone-layer" className="layer-toggle" type="checkbox" role="switch" checked={showZones} aria-checked={showZones} onChange={(event) => setShowZones(event.target.checked)} disabled={!zones} /></label><p>Zones cover some schools and date to 2015–16. They may have changed. Confirm current school assignment by address with the district. County district boundaries are approximate.</p>{boundaryError && <p className="boundary-error">Some boundary data could not be loaded.</p>}</fieldset>
