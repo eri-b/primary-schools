@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
 import { ChevronDown, MapPin, Search } from 'lucide-react';
+import { MetricComparison, useMetricComparison } from '@/components/metric-comparison';
+import { extraMetricOptions, metricsPopup, type MeasuredSchool } from '@/lib/school-metrics';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
 import { SchoolMapHeader } from '@/components/school-map-header';
@@ -13,7 +15,7 @@ import { metricBreaks, metricColor, metricText, type MetricScale } from '@/lib/m
 import { gradeMatchesLevel, type SchoolLevel } from '@/lib/school-grades';
 
 type Result = { tested: number | null; proficient: number | null; index?: number | null; level4: number | null; grades: string[] } | null;
-type School = {
+type School = MeasuredSchool & {
   id: string;
   name: string;
   schoolType?: string;
@@ -58,8 +60,9 @@ function assessmentScore(value: number | null | undefined, region: Region) {
   return value == null ? 'Unavailable' : `${value.toFixed(1)}${region === 'connecticut' ? '' : '%'}`;
 }
 
-type DotMetric = 'assessment' | 'ela' | 'math' | 'graduation' | 'regents' | 'enrollment' | 'acceptance' | `class-size:${string}`;
+type DotMetric = `metric:${string}` | 'assessment' | 'ela' | 'math' | 'graduation' | 'regents' | 'enrollment' | 'acceptance' | `class-size:${string}`;
 function dotValue(school: School, metric: DotMetric): number | null {
+  if (metric.startsWith('metric:')) return school.metrics?.[metric.slice(7)]?.value ?? null;
   if (metric.startsWith('class-size:')) return school.classSizeByGrade?.[metric.slice(11)] ?? null;
   if (metric === 'acceptance') return school.acceptanceRate ?? null;
   if (metric === 'assessment') return school.average;
@@ -116,6 +119,7 @@ function popupFor(school: School, region: Region, level: SchoolLevel, dotLabel: 
         <div><dt>Regents diploma rate, of cohort</dt><dd>${score(school.graduation?.regentsRate)}</dd></div>
         <div><dt>2021 entering cohort size</dt><dd>${school.graduation?.cohortSize?.toLocaleString() ?? 'Unavailable'}</dd></div>
       </dl><p class="detail-note">Rates use the cohort that first entered grade 9 in 2021; they are not test scores. Charter-school outcomes are not in this NYCPS file. <a href="https://infohub.nyced.org/reports/academics/graduation-results" target="_blank" rel="noopener noreferrer">NYCPS graduation results</a>.</p></section>` : ''}
+      ${metricsPopup(school)}
       <section><h3>Student demographics</h3><dl class="detail-grid">${demographics.map(([label, value]) => `<div><dt>${label}</dt><dd>${score(value as number | null)}</dd></div>`).join('')}</dl><p class="detail-note">2024–25 NCES Common Core of Data.</p></section>
     </div></details>
   </article>`;
@@ -151,7 +155,7 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
   const [county, setCounty] = useState('All counties');
   const [schoolType, setSchoolType] = useState('All school types');
   const [onlyScored, setOnlyScored] = useState(false);
-  const [dotMetric, setDotMetric] = useState<DotMetric>(hasScores ? 'assessment' : hasGraduation ? 'graduation' : 'enrollment');
+  const [dotMetric, setDotMetric] = useState<DotMetric | null>(null);
   const [showDistricts, setShowDistricts] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -162,12 +166,17 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
   const schoolTypeNames = useMemo(() => ['All school types', ...new Set(schools.map((school) => school.schoolType).filter((type): type is string => Boolean(type)))].sort((a, b) => a === 'All school types' ? -1 : b === 'All school types' ? 1 : a === 'Regular School' ? -1 : b === 'Regular School' ? 1 : a.localeCompare(b)), [schools]);
   const hasAcceptance = schools.some((school) => school.acceptanceRate != null);
   const classSizeGrades = useMemo(() => [...new Set(schools.flatMap((school) => Object.entries(school.classSizeByGrade ?? {}).filter(([grade, value]) => value != null && gradeMatchesLevel(grade, level)).map(([grade]) => grade)))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [schools, level]);
-  const effectiveMetric = dotMetric === 'assessment' && !hasScores ? 'enrollment' : dotMetric;
-  const dotScale: MetricScale = effectiveMetric === 'enrollment' || effectiveMetric.startsWith('class-size:') ? 'count' : effectiveMetric === 'assessment' && region === 'connecticut' ? 'index' : 'percent';
-  const dotLabel = effectiveMetric === 'assessment' ? `Average ${region === 'connecticut' ? 'performance index' : 'proficiency'}` : effectiveMetric === 'ela' ? 'ELA proficiency' : effectiveMetric === 'math' ? 'Math proficiency' : effectiveMetric === 'graduation' ? 'Four-year graduation rate' : effectiveMetric === 'regents' ? 'Regents diploma rate' : effectiveMetric === 'enrollment' ? 'Schoolwide enrollment' : effectiveMetric === 'acceptance' ? 'Acceptance rate' : `Grade ${effectiveMetric.slice(11)} average class size`;
-  const relativeScale = effectiveMetric === 'graduation' || effectiveMetric === 'regents';
+  const additionalMetrics = useMemo(() => extraMetricOptions(schools), [schools]);
+  const preferredKey = level === 'high' ? 'graduation' : `ela-${level}`;
+  const defaultExtra = additionalMetrics.find(([key]) => key === preferredKey) ?? additionalMetrics.find(([key]) => region === 'connecticut' && key === 'ela-index');
+  const effectiveMetric: DotMetric = dotMetric ?? (hasScores ? 'assessment' : hasGraduation ? 'graduation' : defaultExtra ? `metric:${defaultExtra[0]}` : 'enrollment');
+  const selectedExtra = effectiveMetric.startsWith('metric:') ? additionalMetrics.find(([key]) => key === effectiveMetric.slice(7))?.[1] : undefined;
+  const lowerIsBetter = selectedExtra?.lowerIsBetter ?? false;
+  const dotScale: MetricScale = selectedExtra?.unit ?? (effectiveMetric === 'enrollment' || effectiveMetric.startsWith('class-size:') ? 'count' : effectiveMetric === 'assessment' && region === 'connecticut' ? 'index' : 'percent');
+  const dotLabel = selectedExtra?.label ?? (effectiveMetric === 'assessment' ? `Average ${region === 'connecticut' ? 'performance index' : 'proficiency'}` : effectiveMetric === 'ela' ? 'ELA proficiency' : effectiveMetric === 'math' ? 'Math proficiency' : effectiveMetric === 'graduation' ? 'Four-year graduation rate' : effectiveMetric === 'regents' ? 'Regents diploma rate' : effectiveMetric === 'enrollment' ? 'Schoolwide enrollment' : effectiveMetric === 'acceptance' ? 'Acceptance rate' : `Grade ${effectiveMetric.slice(11)} average class size`);
+  const relativeScale = Boolean(selectedExtra) || effectiveMetric === 'graduation' || effectiveMetric === 'regents';
   const breaks = useMemo(() => metricBreaks(schools.map((school) => dotValue(school, effectiveMetric)), dotScale, relativeScale), [schools, effectiveMetric, dotScale, relativeScale]);
-  const filteredSchools = useMemo(() => {
+  const baseFilteredSchools = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return schools.filter((school) =>
       (district === 'All districts' || school.district === district) &&
@@ -176,6 +185,9 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
       (!(hasScores || hasGraduation) || !onlyScored || dotValue(school, effectiveMetric) !== null) &&
       (!needle || `${school.name} ${school.city} ${school.district} ${school.county}`.toLowerCase().includes(needle)));
   }, [schools, county, district, schoolType, level, hasScores, hasGraduation, onlyScored, effectiveMetric, query]);
+
+  const comparison = useMetricComparison(baseFilteredSchools, effectiveMetric, school => dotValue(school, effectiveMetric));
+  const filteredSchools = comparison.schools;
 
   useEffect(() => {
     let cancelled = false;
@@ -236,6 +248,7 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
   useEffect(() => {
     const L = leafletRef.current, map = mapRef.current, layer = markersRef.current;
     if (!mapReady || !L || !map || !layer) return;
+    map.closePopup();
     layer.clearLayers();
     const byLocation = new Map<string, School[]>();
     for (const school of filteredSchools) {
@@ -249,7 +262,7 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
       const school = group[0];
       const point: [number, number] = [school.lat, school.lng];
       if (group.length === 1) {
-        L.circleMarker(point, { pane: 'schools', className: 'school-marker', radius: 6.5, color: '#fff', weight: 2, fillColor: metricColor(dotValue(school, effectiveMetric), breaks), fillOpacity: 0.96 })
+        L.circleMarker(point, { pane: 'schools', className: 'school-marker', radius: 6.5, color: '#fff', weight: 2, fillColor: metricColor(dotValue(school, effectiveMetric), breaks, lowerIsBetter), fillOpacity: 0.96 })
           .bindTooltip(`${escapeHtml(school.name)}<br>${escapeHtml(dotLabel)}: ${metricText(dotValue(school, effectiveMetric), dotScale)}`, { direction: 'top', offset: [0, -5] })
           .bindPopup(popupFor(school, region, level, dotLabel, effectiveMetric, dotScale), { minWidth: 300, maxWidth: 360, maxHeight: 520 }).addTo(layer);
       } else {
@@ -258,7 +271,7 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
           const radius = 4 + group.length;
           const x = 20 + Math.cos(angle) * radius;
           const y = 20 + Math.sin(angle) * radius;
-          return `<span class="shared-school-dot" style="left:${x}px;top:${y}px;background-color:${metricColor(dotValue(item, effectiveMetric), breaks)}"></span>`;
+          return `<span class="shared-school-dot" style="left:${x}px;top:${y}px;background-color:${metricColor(dotValue(item, effectiveMetric), breaks, lowerIsBetter)}"></span>`;
         }).join('');
         L.marker(point, { pane: 'schools', title: `${group.length} schools at this location`, icon: L.divIcon({ className: 'shared-school-marker', html: dots, iconSize: [40, 40], iconAnchor: [20, 20] }) })
           .bindTooltip(`${group.length} schools at this location<br>${group.map((item) => escapeHtml(item.name)).join('<br>')}`, { direction: 'top', offset: [0, -12] })
@@ -271,7 +284,7 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
       lastSearchRef.current = filterKey;
       if ((query || county !== 'All counties' || district !== 'All districts' || schoolType !== 'All school types') && bounds.length) map.fitBounds(bounds, { padding: [36, 36], maxZoom: bounds.length === 1 ? 14 : 13 });
     }
-  }, [breaks, county, district, schoolType, filteredSchools, mapReady, query, region, level, schools.length, effectiveMetric, dotLabel, dotScale]);
+  }, [breaks, county, district, schoolType, filteredSchools, mapReady, query, region, level, schools.length, effectiveMetric, dotLabel, dotScale, lowerIsBetter]);
 
   return <main className="map-shell">
     <aside className="control-panel">
@@ -281,10 +294,16 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
         <details className="filter-section"><summary><span>Filters{(county !== 'All counties' || district !== 'All districts' || schoolType !== 'All school types' || onlyScored) ? ' (active)' : ''}</span><ChevronDown size={17} aria-hidden="true" /></summary><div className="filter-grid"><div className="filter-control"><label htmlFor="county-filter">County / region</label><NativeSelect id="county-filter" className="w-full" value={county} onChange={(event) => { setCounty(event.target.value); setDistrict('All districts'); }}>{countyNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div><div className="filter-control"><label htmlFor="district-filter">District</label><NativeSelect id="district-filter" className="w-full" value={district} onChange={(event) => setDistrict(event.target.value)}>{districtNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div>{level !== 'elementary' && <div className="filter-control"><label htmlFor="school-type-filter">School type</label><NativeSelect id="school-type-filter" className="w-full" value={schoolType} onChange={(event) => setSchoolType(event.target.value)}>{schoolTypeNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div>}{(hasScores || hasGraduation) && <label className="filter-checkbox"><input type="checkbox" checked={onlyScored} onChange={(event) => setOnlyScored(event.target.checked)} />Has selected result</label>}</div></details>
       </div>
       <div className="result-count" aria-live="polite"><MapPin size={17} aria-hidden="true" /><strong>{filteredSchools.length.toLocaleString()}</strong><span>{filteredSchools.length === 1 ? 'school shown' : 'schools shown'}</span></div>
-      <div className="dot-metric-control"><label htmlFor="region-dot-metric">Color dots by</label><NativeSelect id="region-dot-metric" className="w-full" value={effectiveMetric} onChange={(event) => setDotMetric(event.target.value as DotMetric)}>{hasScores && <NativeSelectOption value="assessment">Average ELA and math proficiency</NativeSelectOption>}{level === 'middle' && region === 'nyc' && <><NativeSelectOption value="ela">ELA proficiency</NativeSelectOption><NativeSelectOption value="math">Math proficiency</NativeSelectOption></>}{hasGraduation && <><NativeSelectOption value="graduation">Four-year graduation rate</NativeSelectOption><NativeSelectOption value="regents">Regents diploma rate</NativeSelectOption></>}<NativeSelectOption value="enrollment">Schoolwide enrollment</NativeSelectOption>{hasAcceptance && <NativeSelectOption value="acceptance">Acceptance rate</NativeSelectOption>}{classSizeGrades.map((grade) => <NativeSelectOption key={grade} value={`class-size:${grade}`}>Grade {grade} average class size</NativeSelectOption>)}</NativeSelect></div>
+      <div className="dot-metric-control"><label htmlFor="region-dot-metric">Color dots by</label><NativeSelect id="region-dot-metric" className="w-full" value={effectiveMetric} onChange={(event) => setDotMetric(event.target.value as DotMetric)}>{hasScores && <NativeSelectOption value="assessment">Average ELA and math proficiency</NativeSelectOption>}{level === 'middle' && region === 'nyc' && <><NativeSelectOption value="ela">ELA proficiency</NativeSelectOption><NativeSelectOption value="math">Math proficiency</NativeSelectOption></>}{hasGraduation && <><NativeSelectOption value="graduation">Four-year graduation rate</NativeSelectOption><NativeSelectOption value="regents">Regents diploma rate</NativeSelectOption></>}{additionalMetrics.map(([key, metric]) => <NativeSelectOption key={key} value={`metric:${key}`}>{metric.label} · {metric.year}</NativeSelectOption>)}<NativeSelectOption value="enrollment">Schoolwide enrollment</NativeSelectOption>{hasAcceptance && <NativeSelectOption value="acceptance">Acceptance rate</NativeSelectOption>}{classSizeGrades.map((grade) => <NativeSelectOption key={grade} value={`class-size:${grade}`}>Grade {grade} average class size</NativeSelectOption>)}</NativeSelect></div>
+      <MetricComparison comparison={comparison} label={dotLabel} scale={dotScale} value={school => dotValue(school, effectiveMetric)} note={selectedExtra ? `${selectedExtra.year}. ${selectedExtra.note}` : undefined} onSelect={school => {
+        const L = leafletRef.current, map = mapRef.current;
+        if (!L || !map) return;
+        map.setView([school.lat, school.lng], 13);
+        L.popup({ minWidth: 300, maxWidth: 400, maxHeight: 520 }).setLatLng([school.lat, school.lng]).setContent(popupFor(school, region, level, dotLabel, effectiveMetric, dotScale)).openOn(map);
+      }} />
       <fieldset className="layer-controls"><legend>Boundary layers</legend><label htmlFor="district-layer"><span><i className="line-key district-key" />School districts</span><input id="district-layer" className="layer-toggle" type="checkbox" role="switch" checked={showDistricts} aria-checked={showDistricts} onChange={(event) => setShowDistricts(event.target.checked)} disabled={!districts} /></label><p>District boundaries are generalized 2024–25 NCES data. Confirm a specific address with the district.</p>{boundaryError && <p className="boundary-error">District boundaries could not be loaded.</p>}</fieldset>
-      <DotMetricLegend label={dotLabel} breaks={breaks} scale={dotScale} relative={relativeScale} />
-      <DataSourcesFooter><p>{level === 'middle' && region === 'nyc' && <>Scores: <a href="https://infohub.nyced.org/reports/academics/test-results" target="_blank" rel="noopener noreferrer">NYCPS 2026 grades 6–8 ELA and math</a>. </>}{level === 'high' && region === 'nyc' && <>Outcomes: <a href="https://infohub.nyced.org/reports/academics/graduation-results" target="_blank" rel="noopener noreferrer">NYCPS class of 2025 four-year graduation</a> and Regents diploma rates. </>}{level !== 'elementary' && region !== 'nyc' && <>Assessment and graduation results are not included for this region yet. </>}{level === 'elementary' && (region === 'long-island' || region === 'hudson-valley') && <>Scores: <a href="https://data.nysed.gov/downloads.php" target="_blank" rel="noopener noreferrer">NYSED 2024–25 report cards</a>, combining published grades 3–5 counts. </>}{level === 'elementary' && region === 'new-jersey' && <>Scores: <a href="https://www.nj.gov/education/assessment/results/reports/2425/index.shtml" target="_blank" rel="noopener noreferrer">NJDOE 2024–25 NJSLA</a>, combining published grades 3–5 results. </>}{level === 'elementary' && region === 'connecticut' && <>Scores: <a href="https://data.ct.gov/Education/Next-Generation-Accountability-System/h28j-iix5" target="_blank" rel="noopener noreferrer">CSDE 2024–25 accountability data</a>, using the ELA and math performance index. This index is not a proficiency percentage. </>}{level === 'elementary' ? <>Enrollment, demographics, and locations: <a href="https://nces.ed.gov/opengis/rest/services/K12_School_Locations/EDGE_ADMINDATA_PUBLICSCH_2425/MapServer/1" target="_blank" rel="noopener noreferrer">NCES 2024–25</a>. </> : <>School grades, enrollment, and demographics: <a href="https://nces.ed.gov/ccd/files.asp" target="_blank" rel="noopener noreferrer">NCES CCD 2024–25</a>. Locations: <a href="https://nces.ed.gov/programs/edge/Geographic/SchoolLocations" target="_blank" rel="noopener noreferrer">NCES EDGE 2024–25</a>. </>}District boundaries: {region === 'hudson-valley' ? <>NCES 2024–25 and <a href="https://gisservices.its.ny.gov/arcgis/rest/services/NYS_Schools/MapServer/18" target="_blank" rel="noopener noreferrer">NYS GIS</a>.</> : region === 'westchester' ? <><a href="https://q-giswww.westchestergov.com/arcgis/rest/services/MappingWestchesterCounty/MapServer/87" target="_blank" rel="noopener noreferrer">Westchester County GIS</a>.</> : region === 'nyc' ? <>NYC Open Data.</> : <><a href="https://nces.ed.gov/opengis/rest/services/School_District_Boundaries/EDGE_ADMINDATA_SCHOOLDISTRICTS_SY2425/MapServer/1" target="_blank" rel="noopener noreferrer">NCES 2024–25</a>.</>}</p></DataSourcesFooter>
+      <DotMetricLegend label={dotLabel} breaks={breaks} scale={dotScale} relative={relativeScale} lowerIsBetter={lowerIsBetter} />
+      <DataSourcesFooter><p>{level === 'middle' && region === 'nyc' && <>Scores: <a href="https://infohub.nyced.org/reports/academics/test-results" target="_blank" rel="noopener noreferrer">NYCPS 2026 grades 6–8 ELA and math</a>. </>}{level === 'high' && region === 'nyc' && <>Outcomes: <a href="https://infohub.nyced.org/reports/academics/graduation-results" target="_blank" rel="noopener noreferrer">NYCPS class of 2025 four-year graduation</a> and Regents diploma rates. </>}{level !== 'elementary' && region !== 'nyc' && <>Additional outcomes and resource measures use official state reports; reporting periods and sources appear in school details. Missing or suppressed results remain unavailable. </>}{level === 'elementary' && (region === 'long-island' || region === 'hudson-valley') && <>Scores: <a href="https://data.nysed.gov/downloads.php" target="_blank" rel="noopener noreferrer">NYSED 2024–25 report cards</a>, combining published grades 3–5 counts. </>}{level === 'elementary' && region === 'new-jersey' && <>Scores: <a href="https://www.nj.gov/education/assessment/results/reports/2425/index.shtml" target="_blank" rel="noopener noreferrer">NJDOE 2024–25 NJSLA</a>, combining published grades 3–5 results. </>}{level === 'elementary' && region === 'connecticut' && <>Scores: <a href="https://data.ct.gov/Education/Next-Generation-Accountability-System/h28j-iix5" target="_blank" rel="noopener noreferrer">CSDE 2024–25 accountability data</a>, using the ELA and math performance index. This index is not a proficiency percentage. </>}{level === 'elementary' ? <>Enrollment, demographics, and locations: <a href="https://nces.ed.gov/opengis/rest/services/K12_School_Locations/EDGE_ADMINDATA_PUBLICSCH_2425/MapServer/1" target="_blank" rel="noopener noreferrer">NCES 2024–25</a>. </> : <>School grades, enrollment, and demographics: <a href="https://nces.ed.gov/ccd/files.asp" target="_blank" rel="noopener noreferrer">NCES CCD 2024–25</a>. Locations: <a href="https://nces.ed.gov/programs/edge/Geographic/SchoolLocations" target="_blank" rel="noopener noreferrer">NCES EDGE 2024–25</a>. </>}District boundaries: {region === 'hudson-valley' ? <>NCES 2024–25 and <a href="https://gisservices.its.ny.gov/arcgis/rest/services/NYS_Schools/MapServer/18" target="_blank" rel="noopener noreferrer">NYS GIS</a>.</> : region === 'westchester' ? <><a href="https://q-giswww.westchestergov.com/arcgis/rest/services/MappingWestchesterCounty/MapServer/87" target="_blank" rel="noopener noreferrer">Westchester County GIS</a>.</> : region === 'nyc' ? <>NYC Open Data.</> : <><a href="https://nces.ed.gov/opengis/rest/services/School_District_Boundaries/EDGE_ADMINDATA_SCHOOLDISTRICTS_SY2425/MapServer/1" target="_blank" rel="noopener noreferrer">NCES 2024–25</a>.</>}</p></DataSourcesFooter>
     </aside>
     <section className="map-stage" aria-label="Interactive school map">{loadError && <div className="map-message">School data could not be loaded.</div>}{!loadError && schools.length === 0 && <div className="map-message">Loading schools…</div>}{schools.length > 0 && filteredSchools.length === 0 && <div className="empty-message">No schools match those filters.</div>}<div ref={mapElementRef} className="map-canvas" role="application" aria-label={`Map of ${title}`} /></section>
   </main>;

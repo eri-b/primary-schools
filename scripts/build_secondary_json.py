@@ -16,6 +16,8 @@ import zipfile
 from collections import defaultdict
 from pathlib import Path
 
+from school_metric_io import write_schools
+
 
 PUBLIC = Path(__file__).resolve().parents[1] / "public"
 SOURCES = {
@@ -33,6 +35,11 @@ REGIONS = {
 }
 GRADES = {"middle": range(6, 9), "high": range(9, 13)}
 ELEMENTARY_GRADE_FIELDS = ("G_PK_OFFERED", "G_KG_OFFERED", "G_1_OFFERED", "G_2_OFFERED", "G_3_OFFERED", "G_4_OFFERED")
+# NCES lists Linden Avenue as 6–9; the district identifies it as 6–8.
+# https://resources.finalsite.net/images/v1725986828/redhookcentralschoolsorg/eehtmwprqqwhmlsdvny2/2024-2025LAMSActivities.pdf
+DIRECTORY_CORRECTIONS = {
+    "362424003333": {"GSLO": "06", "GSHI": "08", "G_9_OFFERED": "No"},
+}
 
 
 def source_file(source_dir, key):
@@ -77,6 +84,7 @@ def directory(path, locations):
             school_id = row["NCESSCH"]
             if school_id not in locations or row["SY_STATUS_TEXT"] not in {"Open", "New", "Changed Boundary/Agency"}:
                 continue
+            row.update(DIRECTORY_CORRECTIONS.get(school_id, {}))
             levels = [level for level, grades in GRADES.items()
                       if any(row.get(f"G_{grade}_OFFERED") == "Yes" for grade in grades)]
             if any(row.get(field) == "Yes" for field in ELEMENTARY_GRADE_FIELDS):
@@ -180,7 +188,7 @@ def extend_hudson_valley(schools, locations, enrollment):
     existing = [school for school in json.loads(path.read_text()) if school["county"] not in counties]
     records = existing + additions
     records.sort(key=lambda school: (school["county"], school["district"], school["name"]))
-    path.write_text(json.dumps(records, separators=(",", ":")) + "\n")
+    write_schools(path, records)
     print(f"elementary hudson-valley: {len(records)} schools, including {len(additions)} in Orange, Rockland, and Sullivan", flush=True)
 
 
@@ -284,7 +292,7 @@ def main():
                        for school_id, item in schools.items()
                        if has_students(school_id, level, schools, enrollment) and locations[school_id]["countyCode"] in labels]
             records.sort(key=lambda school: (school["county"], school["district"], school["name"]))
-            PUBLIC.joinpath(f"{level}-{region}-schools.json").write_text(json.dumps(records, separators=(",", ":")) + "\n")
+            write_schools(PUBLIC.joinpath(f"{level}-{region}-schools.json"), records)
             print(f"{level} {region}: {len(records)} schools", flush=True)
     if "nyc" in selected:
         from add_nyc_secondary_outcomes import enrich

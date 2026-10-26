@@ -1024,3 +1024,20 @@ h1 {
     left: 8px;
   }
 }
+
+.metric-comparison { margin: 16px 0; padding: 16px 0; border-top: 1px solid #d8e0e5; border-bottom: 1px solid #d8e0e5; font-size: 13px; }
+.comparison-label { font-weight: 650; margin-bottom: 8px; }
+.metric-range { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.metric-range label, .comparison-sort { display: grid; gap: 5px; }
+.metric-range input { width: 100%; min-width: 0; border: 1px solid #cbd5e1; padding: 8px; background: white; }
+.comparison-sort { margin-top: 12px; }
+.comparison-results { margin-top: 12px; }
+.comparison-results summary { cursor: pointer; font-weight: 650; }
+.comparison-results ol { padding: 0; list-style: none; max-height: 320px; overflow: auto; }
+.comparison-results li { border-bottom: 1px solid #e2e8f0; }
+.comparison-results li button { display: flex; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 0; text-align: left; cursor: pointer; }
+.comparison-results li button:hover { color: #087f5b; }
+.comparison-results li strong { white-space: nowrap; }
+.comparison-more { padding: 8px 0; text-decoration: underline; cursor: pointer; }
+.additional-metric { padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+.additional-metric strong { font-size: 13px; }

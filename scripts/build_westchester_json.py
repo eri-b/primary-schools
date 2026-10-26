@@ -15,6 +15,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from school_metric_io import write_schools
+
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "public"
@@ -189,7 +191,7 @@ def main():
             "reportUrl": result.get("url"),
         })
     schools.sort(key=lambda school: (school["district"], school["name"]))
-    PUBLIC.joinpath("westchester-schools.json").write_text(json.dumps(schools, separators=(",", ":")) + "\n")
+    write_schools(PUBLIC.joinpath("westchester-schools.json"), schools)
 
     boundaries = json.loads(fetch(api_url(DISTRICTS, where="1=1", outFields="DISTNAME", outSR=4326, f="geojson")))
     for feature in boundaries["features"]:

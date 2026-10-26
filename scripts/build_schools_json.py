@@ -5,6 +5,8 @@ import tempfile
 import urllib.parse
 import zipfile
 from pathlib import Path
+
+from school_metric_io import retain_metrics
 from xml.etree import ElementTree
 
 
@@ -637,6 +639,7 @@ def main():
             schools = build(source_dir)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    retain_metrics(args.output, schools)
     with args.output.open("w", encoding="utf-8") as destination:
         json.dump(schools, destination, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
         destination.write("\n")

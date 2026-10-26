@@ -18,6 +18,8 @@ import zipfile
 from collections import defaultdict
 from pathlib import Path
 
+from school_metric_io import write_schools
+
 from build_westchester_json import (
     NCES, NYSED, api_url, fetch, normalize, normalize_district,
     report_counts, round_coordinates, school_links,
@@ -276,7 +278,7 @@ def build_region(region, counties):
     scores = match_scores(school_items, counties) if region in ("long-island", "hudson-valley") else match_nj_scores(school_items) if region == "new-jersey" else match_ct_scores(school_items)
     schools = [school_record(row, county, scores.get(row["NCESSCH"], {}), region) for county, row in rows]
     schools.sort(key=lambda item: (item["county"], item["district"], item["name"]))
-    PUBLIC.joinpath(f"{region}-schools.json").write_text(json.dumps(schools, separators=(",", ":")) + "\n")
+    write_schools(PUBLIC.joinpath(f"{region}-schools.json"), schools)
     boundaries = district_boundaries(counties.values())
     PUBLIC.joinpath(f"{region}-districts.geojson").write_text(json.dumps(boundaries, separators=(",", ":")) + "\n")
     print(f"{region}: {len(schools)} schools, {sum(s['average'] is not None for s in schools)} with scores, {len(boundaries['features'])} district polygons", flush=True)

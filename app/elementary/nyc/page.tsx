@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
 import { ChevronDown, MapPin, Search } from 'lucide-react';
+import { MetricComparison, useMetricComparison } from '@/components/metric-comparison';
+import { extraMetricOptions, metricsPopup, type MeasuredSchool } from '@/lib/school-metrics';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
 import { SchoolMapHeader } from '@/components/school-map-header';
@@ -15,7 +17,7 @@ import {
   NativeSelectOption,
 } from '@/components/ui/native-select';
 
-type School = {
+type School = MeasuredSchool & {
   dbn: string;
   name: string;
   borough: string;
@@ -116,8 +118,9 @@ const BOROUGHS = [
 const DEFAULT_MAP_CENTER: [number, number] = [40.7128, -74.006];
 const DEFAULT_MAP_ZOOM = 11;
 
-type DotMetric = 'average' | 'enrollment' | 'acceptance' | `grade:${string}` | `class-size:${string}`;
+type DotMetric = `metric:${string}` | 'average' | 'enrollment' | 'acceptance' | `grade:${string}` | `class-size:${string}`;
 function dotValue(school: School, metric: DotMetric): number | null {
+  if (metric.startsWith('metric:')) return school.metrics?.[metric.slice(7)]?.value ?? null;
   if (metric.startsWith('class-size:')) return school.classSizeByGrade?.[metric.slice(11)] ?? null;
   if (metric === 'acceptance') return school.acceptanceRate ?? null;
   if (metric.startsWith('grade:')) return school.details.gradeEnrollment.find(({ grade }) => grade === metric.slice(6))?.count ?? null;
@@ -393,6 +396,7 @@ function popupFor(school: School) {
             </div>
           </div>
         </div>
+        ${metricsPopup(school)}
       </details>
     </article>`;
 }
@@ -424,11 +428,14 @@ export default function Home() {
   }), [schools]);
   const hasAcceptance = schools.some((school) => school.acceptanceRate != null);
   const classSizeGrades = useMemo(() => [...new Set(schools.flatMap((school) => Object.entries(school.classSizeByGrade ?? {}).filter(([grade, value]) => value != null && gradeMatchesLevel(grade, 'elementary')).map(([grade]) => grade)))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [schools]);
-  const dotScale: MetricScale = dotMetric === 'average' || dotMetric === 'acceptance' ? 'percent' : 'count';
-  const dotLabel = dotMetric === 'average' ? 'Average proficiency' : dotMetric === 'enrollment' ? 'Schoolwide enrollment' : dotMetric === 'acceptance' ? 'Acceptance rate' : dotMetric.startsWith('class-size:') ? `Grade ${dotMetric.slice(11)} average class size` : `${dotMetric.slice(6)} enrollment`;
-  const breaks = useMemo(() => metricBreaks(schools.map((school) => dotValue(school, dotMetric)), dotScale), [schools, dotMetric, dotScale]);
+  const additionalMetrics = useMemo(() => extraMetricOptions(schools), [schools]);
+  const selectedExtra = dotMetric.startsWith('metric:') ? additionalMetrics.find(([key]) => key === dotMetric.slice(7))?.[1] : undefined;
+  const lowerIsBetter = selectedExtra?.lowerIsBetter ?? false;
+  const dotScale: MetricScale = selectedExtra?.unit ?? (dotMetric === 'average' || dotMetric === 'acceptance' ? 'percent' : 'count');
+  const dotLabel = selectedExtra?.label ?? (dotMetric === 'average' ? 'Average proficiency' : dotMetric === 'enrollment' ? 'Schoolwide enrollment' : dotMetric === 'acceptance' ? 'Acceptance rate' : dotMetric.startsWith('class-size:') ? `Grade ${dotMetric.slice(11)} average class size` : `${dotMetric.slice(6)} enrollment`);
+  const breaks = useMemo(() => metricBreaks(schools.map((school) => dotValue(school, dotMetric)), dotScale, Boolean(selectedExtra)), [schools, dotMetric, dotScale, selectedExtra]);
 
-  const filteredSchools = useMemo(() => {
+  const baseFilteredSchools = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return schools.filter((school) => {
       const matchesBorough =
@@ -449,6 +456,9 @@ export default function Home() {
       return matchesBorough && matchesQuery && matchesGt && matches3K;
     });
   }, [borough, gtFilter, only3K, query, schools]);
+
+  const comparison = useMetricComparison(baseFilteredSchools, dotMetric, school => dotValue(school, dotMetric));
+  const filteredSchools = comparison.schools;
 
   const activeFilterCount =
     Number(borough !== 'All boroughs') +
@@ -624,6 +634,7 @@ export default function Home() {
     const layer = layerRef.current;
     if (!mapReady || !L || !map || !layer) return;
 
+    map.closePopup();
     layer.clearLayers();
     const bounds: [number, number][] = [];
     filteredSchools.forEach((school) => {
@@ -633,7 +644,7 @@ export default function Home() {
         radius: 6.5,
         color: '#ffffff',
         weight: 2,
-        fillColor: metricColor(dotValue(school, dotMetric), breaks),
+        fillColor: metricColor(dotValue(school, dotMetric), breaks, lowerIsBetter),
         fillOpacity: 0.96,
       });
       marker.bindTooltip(`${escapeHtml(school.name)}<br>${escapeHtml(dotLabel)}: ${metricText(dotValue(school, dotMetric), dotScale)}`, { direction: 'top', offset: [0, -5] });
@@ -655,7 +666,7 @@ export default function Home() {
         });
       }
     }
-  }, [filteredSchools, mapReady, query, schools.length, dotMetric, breaks, dotLabel, dotScale]);
+  }, [filteredSchools, mapReady, query, schools.length, dotMetric, breaks, dotLabel, dotScale, lowerIsBetter]);
 
   return (
     <main className="map-shell">
@@ -744,8 +755,14 @@ export default function Home() {
           </span>
         </div>
 
-        <div className="dot-metric-control"><label htmlFor="nyc-dot-metric">Color dots by</label><NativeSelect id="nyc-dot-metric" className="w-full" value={dotMetric} onChange={(event) => setDotMetric(event.target.value as DotMetric)}><NativeSelectOption value="average">Average proficiency</NativeSelectOption><NativeSelectOption value="enrollment">Schoolwide enrollment</NativeSelectOption>{gradeOptions.map((grade) => <NativeSelectOption key={grade} value={`grade:${grade}`}>{grade} enrollment</NativeSelectOption>)}{hasAcceptance && <NativeSelectOption value="acceptance">Acceptance rate</NativeSelectOption>}{classSizeGrades.map((grade) => <NativeSelectOption key={grade} value={`class-size:${grade}`}>Grade {grade} average class size</NativeSelectOption>)}</NativeSelect><p>Grade enrollment counts students in a grade, not classroom size.</p></div>
+        <div className="dot-metric-control"><label htmlFor="nyc-dot-metric">Color dots by</label><NativeSelect id="nyc-dot-metric" className="w-full" value={dotMetric} onChange={(event) => setDotMetric(event.target.value as DotMetric)}><NativeSelectOption value="average">Average proficiency</NativeSelectOption>{additionalMetrics.map(([key, metric]) => <NativeSelectOption key={key} value={`metric:${key}`}>{metric.label} · {metric.year}</NativeSelectOption>)}<NativeSelectOption value="enrollment">Schoolwide enrollment</NativeSelectOption>{gradeOptions.map((grade) => <NativeSelectOption key={grade} value={`grade:${grade}`}>{grade} enrollment</NativeSelectOption>)}{hasAcceptance && <NativeSelectOption value="acceptance">Acceptance rate</NativeSelectOption>}{classSizeGrades.map((grade) => <NativeSelectOption key={grade} value={`class-size:${grade}`}>Grade {grade} average class size</NativeSelectOption>)}</NativeSelect><p>Grade enrollment counts students in a grade, not classroom size.</p></div>
 
+      <MetricComparison comparison={comparison} label={dotLabel} scale={dotScale} value={school => dotValue(school, dotMetric)} note={selectedExtra ? `${selectedExtra.year}. ${selectedExtra.note}` : undefined} onSelect={school => {
+        const L = leafletRef.current, map = mapRef.current;
+        if (!L || !map) return;
+        map.setView([school.lat, school.lng], 13);
+        L.popup({ minWidth: 300, maxWidth: 400, maxHeight: 520 }).setLatLng([school.lat, school.lng]).setContent(popupFor(school)).openOn(map);
+      }} />
         <fieldset className="layer-controls">
           <legend>Boundary layers</legend>
           <label htmlFor="district-layer-toggle">
@@ -792,7 +809,7 @@ export default function Home() {
           )}
         </fieldset>
 
-        <DotMetricLegend label={dotLabel} breaks={breaks} scale={dotScale} />
+        <DotMetricLegend label={dotLabel} breaks={breaks} scale={dotScale} relative={Boolean(selectedExtra)} lowerIsBetter={lowerIsBetter} />
 
         <DataSourcesFooter>
           <p>
