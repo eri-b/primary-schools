@@ -5,7 +5,7 @@ import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
 import { ChevronDown, MapPin, Search } from 'lucide-react';
 import { MetricComparison, useMetricComparison } from '@/components/metric-comparison';
-import { extraMetricOptions, metricsPopup, type MeasuredSchool } from '@/lib/school-metrics';
+import { extraMetricOptions, getSchoolMetric, metricsPopup, type MeasuredSchool } from '@/lib/school-metrics';
 import { SchoolSectorFilter, matchesSchoolSector, type SchoolSector } from '@/components/school-sector-filter';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
@@ -43,7 +43,7 @@ function score(value: number | null | undefined) {
 
 type DotMetric = 'average' | 'enrollment' | `metric:${string}`;
 function dotValue(school: School, metric: DotMetric) {
-  if (metric.startsWith('metric:')) return school.metrics?.[metric.slice(7)]?.value ?? null;
+  if (metric.startsWith('metric:')) return getSchoolMetric(school, metric.slice(7))?.value ?? null;
   return metric === 'average' ? school.average : school.enrollment;
 }
 
@@ -105,7 +105,7 @@ export default function WestchesterElementary() {
   const [boundaryError, setBoundaryError] = useState(false);
 
   const districtNames = useMemo(() => ['All districts', ...new Set(schools.map((school) => school.district))].sort((a, b) => a === 'All districts' ? -1 : b === 'All districts' ? 1 : a.localeCompare(b)), [schools]);
-  const additionalMetrics = useMemo(() => extraMetricOptions(schools), [schools]);
+  const additionalMetrics = useMemo(() => extraMetricOptions(schools, false), [schools]);
   const selectedExtra = dotMetric.startsWith('metric:') ? additionalMetrics.find(([key]) => key === dotMetric.slice(7))?.[1] : undefined;
   const lowerIsBetter = selectedExtra?.lowerIsBetter ?? false;
   const dotScale: MetricScale = selectedExtra?.unit ?? (dotMetric === 'enrollment' ? 'count' : 'percent');

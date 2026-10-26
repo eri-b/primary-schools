@@ -1,23 +1,7 @@
-import { metricText, type MetricScale } from '@/lib/map-metrics';
+import { metricText } from '@/lib/map-metrics';
 
-export type SchoolMetric = {
-  value: number;
-  label: string;
-  year: string;
-  unit: MetricScale;
-  source: string;
-  note: string;
-  lowerIsBetter: boolean;
-};
-export type MeasuredSchool = { metrics?: Record<string, SchoolMetric> };
-
-export function extraMetricOptions(schools: MeasuredSchool[]) {
-  const options = new Map<string, SchoolMetric>();
-  for (const school of schools) {
-    for (const [key, metric] of Object.entries(school.metrics ?? {})) options.set(key, metric);
-  }
-  return [...options].sort((a, b) => a[1].label.localeCompare(b[1].label));
-}
+import type { MeasuredSchool } from '@/lib/curated-school-metrics';
+export { extraMetricOptions, getSchoolMetric, type MeasuredSchool, type SchoolMetric } from '@/lib/curated-school-metrics';
 
 const escape = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[c]!);
 

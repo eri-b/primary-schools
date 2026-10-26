@@ -5,7 +5,7 @@ import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
 import { ChevronDown, MapPin, Search } from 'lucide-react';
 import { MetricComparison, useMetricComparison } from '@/components/metric-comparison';
-import { extraMetricOptions, metricsPopup, type MeasuredSchool } from '@/lib/school-metrics';
+import { extraMetricOptions, getSchoolMetric, metricsPopup, type MeasuredSchool } from '@/lib/school-metrics';
 import { SchoolSectorFilter, matchesSchoolSector, type SchoolSector } from '@/components/school-sector-filter';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
@@ -13,7 +13,7 @@ import { SchoolMapHeader } from '@/components/school-map-header';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { DotMetricLegend } from '@/components/dot-metric-legend';
 import { metricBreaks, metricColor, metricText, type MetricScale } from '@/lib/map-metrics';
-import { gradeMatchesLevel, type SchoolLevel } from '@/lib/school-grades';
+import { type SchoolLevel } from '@/lib/school-grades';
 
 type Result = { tested: number | null; proficient: number | null; index?: number | null; level4: number | null; grades: string[] } | null;
 type School = MeasuredSchool & {
@@ -64,7 +64,7 @@ function assessmentScore(value: number | null | undefined, region: Region) {
 
 type DotMetric = `metric:${string}` | 'assessment' | 'ela' | 'math' | 'graduation' | 'regents' | 'enrollment' | 'acceptance' | `class-size:${string}`;
 function dotValue(school: School, metric: DotMetric): number | null {
-  if (metric.startsWith('metric:')) return school.metrics?.[metric.slice(7)]?.value ?? null;
+  if (metric.startsWith('metric:')) return getSchoolMetric(school, metric.slice(7))?.value ?? null;
   if (metric.startsWith('class-size:')) return school.classSizeByGrade?.[metric.slice(11)] ?? null;
   if (metric === 'acceptance') return school.acceptanceRate ?? null;
   if (metric === 'assessment') return school.average;
@@ -168,11 +168,10 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
   const countyNames = useMemo(() => ['All counties', ...new Set(schools.map((school) => school.county))], [schools]);
   const schoolTypeNames = useMemo(() => ['All school types', ...new Set(schools.map((school) => school.schoolType).filter((type): type is string => Boolean(type)))].sort((a, b) => a === 'All school types' ? -1 : b === 'All school types' ? 1 : a === 'Regular School' ? -1 : b === 'Regular School' ? 1 : a.localeCompare(b)), [schools]);
   const hasAcceptance = schools.some((school) => school.acceptanceRate != null);
-  const classSizeGrades = useMemo(() => [...new Set(schools.flatMap((school) => Object.entries(school.classSizeByGrade ?? {}).filter(([grade, value]) => value != null && gradeMatchesLevel(grade, level)).map(([grade]) => grade)))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [schools, level]);
-  const additionalMetrics = useMemo(() => extraMetricOptions(schools), [schools]);
-  const preferredKey = level === 'high' ? 'graduation' : `ela-${level}`;
-  const defaultExtra = additionalMetrics.find(([key]) => key === preferredKey) ?? additionalMetrics.find(([key]) => region === 'connecticut' && key === 'ela-index');
-  const effectiveMetric: DotMetric = dotMetric ?? (hasScores ? 'assessment' : hasGraduation ? 'graduation' : defaultExtra ? `metric:${defaultExtra[0]}` : 'enrollment');
+  const additionalMetrics = useMemo(() => extraMetricOptions(schools, !hasScores), [schools, hasScores]);
+  const preferredKey = level === 'high' ? 'graduation' : 'academic-average';
+  const defaultExtra = additionalMetrics.find(([key]) => key === preferredKey) ?? additionalMetrics.find(([key]) => key === 'academic-average');
+  const effectiveMetric: DotMetric = dotMetric ?? (hasScores ? 'assessment' : defaultExtra ? `metric:${defaultExtra[0]}` : hasGraduation ? 'graduation' : 'enrollment');
   const selectedExtra = effectiveMetric.startsWith('metric:') ? additionalMetrics.find(([key]) => key === effectiveMetric.slice(7))?.[1] : undefined;
   const lowerIsBetter = selectedExtra?.lowerIsBetter ?? false;
   const dotScale: MetricScale = selectedExtra?.unit ?? (effectiveMetric === 'enrollment' || effectiveMetric.startsWith('class-size:') ? 'count' : effectiveMetric === 'assessment' && region === 'connecticut' ? 'index' : 'percent');
@@ -298,7 +297,7 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
         <details className="filter-section"><summary><span>Filters{(county !== 'All counties' || district !== 'All districts' || schoolType !== 'All school types' || schoolSector !== 'all' || onlyScored) ? ' (active)' : ''}</span><ChevronDown size={17} aria-hidden="true" /></summary><div className="filter-grid"><SchoolSectorFilter value={schoolSector} onChange={setSchoolSector} /><div className="filter-control"><label htmlFor="county-filter">County / region</label><NativeSelect id="county-filter" className="w-full" value={county} onChange={(event) => { setCounty(event.target.value); setDistrict('All districts'); }}>{countyNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div><div className="filter-control"><label htmlFor="district-filter">District</label><NativeSelect id="district-filter" className="w-full" value={district} onChange={(event) => setDistrict(event.target.value)}>{districtNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div>{level !== 'elementary' && <div className="filter-control"><label htmlFor="school-type-filter">School type</label><NativeSelect id="school-type-filter" className="w-full" value={schoolType} onChange={(event) => setSchoolType(event.target.value)}>{schoolTypeNames.map((name) => <NativeSelectOption key={name} value={name}>{name}</NativeSelectOption>)}</NativeSelect></div>}{(hasScores || hasGraduation) && <label className="filter-checkbox"><input type="checkbox" checked={onlyScored} onChange={(event) => setOnlyScored(event.target.checked)} />Has selected result</label>}</div></details>
       </div>
       <div className="result-count" aria-live="polite"><MapPin size={17} aria-hidden="true" /><strong>{filteredSchools.length.toLocaleString()}</strong><span>{filteredSchools.length === 1 ? 'school shown' : 'schools shown'}</span></div>
-      <div className="dot-metric-control"><label htmlFor="region-dot-metric">Color dots by</label><NativeSelect id="region-dot-metric" className="w-full" value={effectiveMetric} onChange={(event) => setDotMetric(event.target.value as DotMetric)}>{hasScores && <NativeSelectOption value="assessment">Average ELA and math proficiency</NativeSelectOption>}{level === 'middle' && region === 'nyc' && <><NativeSelectOption value="ela">ELA proficiency</NativeSelectOption><NativeSelectOption value="math">Math proficiency</NativeSelectOption></>}{hasGraduation && <><NativeSelectOption value="graduation">Four-year graduation rate</NativeSelectOption><NativeSelectOption value="regents">Regents diploma rate</NativeSelectOption></>}{additionalMetrics.map(([key, metric]) => <NativeSelectOption key={key} value={`metric:${key}`}>{metric.label} · {metric.year}</NativeSelectOption>)}<NativeSelectOption value="enrollment">Schoolwide enrollment</NativeSelectOption>{hasAcceptance && <NativeSelectOption value="acceptance">Acceptance rate</NativeSelectOption>}{classSizeGrades.map((grade) => <NativeSelectOption key={grade} value={`class-size:${grade}`}>Grade {grade} average class size</NativeSelectOption>)}</NativeSelect></div>
+      <div className="dot-metric-control"><label htmlFor="region-dot-metric">Color dots by</label><NativeSelect id="region-dot-metric" className="w-full" value={effectiveMetric} onChange={(event) => setDotMetric(event.target.value as DotMetric)}>{hasScores && <NativeSelectOption value="assessment">Average ELA and math proficiency</NativeSelectOption>}{hasGraduation && !additionalMetrics.some(([key]) => key === 'graduation') && <NativeSelectOption value="graduation">Four-year graduation rate</NativeSelectOption>}{hasGraduation && !additionalMetrics.some(([key]) => key === 'regents-diploma') && <NativeSelectOption value="regents">Regents diploma rate</NativeSelectOption>}{additionalMetrics.map(([key, metric]) => <NativeSelectOption key={key} value={`metric:${key}`}>{metric.label} · {metric.year}</NativeSelectOption>)}<NativeSelectOption value="enrollment">Schoolwide enrollment</NativeSelectOption>{hasAcceptance && <NativeSelectOption value="acceptance">Acceptance rate</NativeSelectOption>}</NativeSelect></div>
       <MetricComparison comparison={comparison} label={dotLabel} scale={dotScale} value={school => dotValue(school, effectiveMetric)} note={selectedExtra ? `${selectedExtra.year}. ${selectedExtra.note}` : undefined} onSelect={school => {
         const L = leafletRef.current, map = mapRef.current;
         if (!L || !map) return;
