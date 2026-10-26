@@ -17,6 +17,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from school_metric_io import write_schools
+from add_school_sectors import charter_status
 
 
 PUBLIC = Path(__file__).resolve().parents[1] / "public"
@@ -145,7 +146,7 @@ def membership(path, school_ids):
 def school_record(row, location, county, enrollment=None, demographics=None):
     return {
         "id": row["NCESSCH"], "name": row["SCH_NAME"].title(), "district": row["LEA_NAME"].title(),
-        "schoolType": row["SCH_TYPE_TEXT"],
+        "schoolType": row["SCH_TYPE_TEXT"], "isCharter": charter_status(row.get("CHARTER_TEXT")),
         "county": county, "city": row["LCITY"].title(), "address": (row.get("LSTREET1") or "").title(),
         "grades": f'{row["GSLO"]}-{row["GSHI"]}', "enrollment": enrollment,
         "lat": location["lat"], "lng": location["lng"], "ela": None, "math": None,

@@ -496,6 +496,7 @@ def build(source_dir):
             {
                 **locations[dbn],
                 "dbn": dbn,
+                "isCharter": False,  # This map uses NYCPS district-school workbooks.
                 "name": demographic["School Name"],
                 "borough": BOROUGHS[dbn[2]],
                 "district": int(dbn[:2]),

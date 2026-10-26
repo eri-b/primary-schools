@@ -16,6 +16,7 @@ import urllib.request
 from pathlib import Path
 
 from school_metric_io import write_schools
+from add_school_sectors import enrich as enrich_school_sectors
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -190,6 +191,7 @@ def main():
             "ela": ela, "math": math, "average": average, "demographics": demographics,
             "reportUrl": result.get("url"),
         })
+    enrich_school_sectors(schools)
     schools.sort(key=lambda school: (school["district"], school["name"]))
     write_schools(PUBLIC.joinpath("westchester-schools.json"), schools)
 
