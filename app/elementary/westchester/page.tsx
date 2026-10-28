@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
 import { ChevronDown, MapPin, Search } from 'lucide-react';
-import { MetricComparison, useMetricComparison } from '@/components/metric-comparison';
 import { extraMetricOptions, getSchoolMetric, metricsPopup, type MeasuredSchool } from '@/lib/school-metrics';
 import { SchoolSectorFilter, matchesSchoolSector, type SchoolSector } from '@/components/school-sector-filter';
 import { Input } from '@/components/ui/input';
@@ -120,8 +119,7 @@ export default function WestchesterElementary() {
       (!needle || `${school.name} ${school.city} ${school.district}`.toLowerCase().includes(needle)));
   }, [schoolSector, schools, district, onlyScored, query]);
 
-  const comparison = useMetricComparison(baseFilteredSchools, dotMetric, school => dotValue(school, dotMetric));
-  const filteredSchools = comparison.schools;
+  const filteredSchools = baseFilteredSchools;
 
   useEffect(() => {
     let cancelled = false;
@@ -230,12 +228,6 @@ export default function WestchesterElementary() {
       </div>
       <div className="result-count" aria-live="polite"><MapPin size={17} aria-hidden="true" /><strong>{filteredSchools.length.toLocaleString()}</strong><span>{filteredSchools.length === 1 ? 'school shown' : 'schools shown'}</span></div>
       <div className="dot-metric-control"><label htmlFor="westchester-dot-metric">Color dots by</label><NativeSelect id="westchester-dot-metric" className="w-full" value={dotMetric} onChange={event => setDotMetric(event.target.value as DotMetric)}><NativeSelectOption value="average">Average proficiency</NativeSelectOption><NativeSelectOption value="enrollment">Schoolwide enrollment</NativeSelectOption>{additionalMetrics.map(([key, metric]) => <NativeSelectOption key={key} value={`metric:${key}`}>{metric.label} · {metric.year}</NativeSelectOption>)}</NativeSelect></div>
-      <MetricComparison comparison={comparison} label={dotLabel} scale={dotScale} value={school => dotValue(school, dotMetric)} note={selectedExtra ? `${selectedExtra.year}. ${selectedExtra.note}` : undefined} onSelect={school => {
-        const L = leafletRef.current, map = mapRef.current;
-        if (!L || !map) return;
-        map.setView([school.lat, school.lng], 13);
-        L.popup({ minWidth: 300, maxWidth: 400, maxHeight: 520 }).setLatLng([school.lat, school.lng]).setContent(popupFor(school)).openOn(map);
-      }} />
       <fieldset className="layer-controls"><legend>Boundary layers</legend><label htmlFor="westchester-district-layer"><span><i className="line-key district-key" />School districts</span><input id="westchester-district-layer" className="layer-toggle" type="checkbox" role="switch" checked={showDistricts} aria-checked={showDistricts} onChange={(event) => setShowDistricts(event.target.checked)} disabled={!districts} /></label><label htmlFor="westchester-zone-layer"><span><i className="line-key zone-key" />Historic elementary zones</span><input id="westchester-zone-layer" className="layer-toggle" type="checkbox" role="switch" checked={showZones} aria-checked={showZones} onChange={(event) => setShowZones(event.target.checked)} disabled={!zones} /></label><p>Zones cover some schools and date to 2015–16. They may have changed. Confirm current school assignment by address with the district. County district boundaries are approximate.</p>{boundaryError && <p className="boundary-error">Some boundary data could not be loaded.</p>}</fieldset>
       <DotMetricLegend label={dotLabel} breaks={breaks} scale={dotScale} relative={Boolean(selectedExtra)} lowerIsBetter={lowerIsBetter} />
       <DataSourcesFooter><p>Scores: <a href="https://data.nysed.gov/downloads.php" target="_blank" rel="noopener noreferrer">NYSED 2024–25 report cards</a>, combining published grades 3–5 counts. Enrollment, demographics, and locations: <a href="https://nces.ed.gov/opengis/rest/services/K12_School_Locations/EDGE_ADMINDATA_PUBLICSCH_2425/MapServer/1" target="_blank" rel="noopener noreferrer">NCES 2024–25</a>. Districts: <a href="https://q-giswww.westchestergov.com/arcgis/rest/services/MappingWestchesterCounty/MapServer/87" target="_blank" rel="noopener noreferrer">Westchester County GIS</a>. Historical zones: <a href="https://nces.ed.gov/programs/edge/SABS" target="_blank" rel="noopener noreferrer">NCES 2015–16 survey</a>.</p></DataSourcesFooter>

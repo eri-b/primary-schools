@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
 import { ChevronDown, MapPin, Search } from 'lucide-react';
-import { MetricComparison, useMetricComparison } from '@/components/metric-comparison';
 import { extraMetricOptions, getSchoolMetric, metricsPopup, type MeasuredSchool } from '@/lib/school-metrics';
 import { SchoolSectorFilter, matchesSchoolSector, type SchoolSector } from '@/components/school-sector-filter';
 import { Input } from '@/components/ui/input';
@@ -303,6 +302,7 @@ function popupFor(school: School) {
               </fieldset>
             </div>
             <div class="popup-panel panel-results">
+              ${metricsPopup(school)}
           <section>
             <h3>ELA results</h3>
             <dl class="detail-grid">
@@ -397,7 +397,6 @@ function popupFor(school: School) {
             </div>
           </div>
         </div>
-        ${metricsPopup(school)}
       </details>
     </article>`;
 }
@@ -454,8 +453,7 @@ export default function Home() {
     });
   }, [borough, gtFilter, only3K, query, schools, schoolSector]);
 
-  const comparison = useMetricComparison(baseFilteredSchools, dotMetric, school => dotValue(school, dotMetric));
-  const filteredSchools = comparison.schools;
+  const filteredSchools = baseFilteredSchools;
 
   const activeFilterCount =
     Number(borough !== 'All boroughs') +
@@ -756,12 +754,6 @@ export default function Home() {
 
         <div className="dot-metric-control"><label htmlFor="nyc-dot-metric">Color dots by</label><NativeSelect id="nyc-dot-metric" className="w-full" value={dotMetric} onChange={(event) => setDotMetric(event.target.value as DotMetric)}><NativeSelectOption value="average">Average proficiency</NativeSelectOption>{additionalMetrics.map(([key, metric]) => <NativeSelectOption key={key} value={`metric:${key}`}>{metric.label} · {metric.year}</NativeSelectOption>)}<NativeSelectOption value="enrollment">Schoolwide enrollment</NativeSelectOption>{hasAcceptance && <NativeSelectOption value="acceptance">Acceptance rate</NativeSelectOption>}</NativeSelect></div>
 
-      <MetricComparison comparison={comparison} label={dotLabel} scale={dotScale} value={school => dotValue(school, dotMetric)} note={selectedExtra ? `${selectedExtra.year}. ${selectedExtra.note}` : undefined} onSelect={school => {
-        const L = leafletRef.current, map = mapRef.current;
-        if (!L || !map) return;
-        map.setView([school.lat, school.lng], 13);
-        L.popup({ minWidth: 300, maxWidth: 400, maxHeight: 520 }).setLatLng([school.lat, school.lng]).setContent(popupFor(school)).openOn(map);
-      }} />
         <fieldset className="layer-controls">
           <legend>Boundary layers</legend>
           <label htmlFor="district-layer-toggle">
