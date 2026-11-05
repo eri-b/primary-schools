@@ -120,8 +120,9 @@ function popupFor(school: School, region: Region, level: SchoolLevel, dotLabel: 
         <div><dt>Regents diploma rate, of cohort</dt><dd>${score(school.graduation?.regentsRate)}</dd></div>
         <div><dt>2021 entering cohort size</dt><dd>${school.graduation?.cohortSize?.toLocaleString() ?? 'Unavailable'}</dd></div>
       </dl><p class="detail-note">Rates use the cohort that first entered grade 9 in 2021; they are not test scores. Charter-school outcomes are not in this NYCPS file. <a href="https://infohub.nyced.org/reports/academics/graduation-results" target="_blank" rel="noopener noreferrer">NYCPS graduation results</a>.</p></section>` : ''}
-      ${metricsPopup(school)}
+      ${metricsPopup(school, level === 'high' ? 'general' : 'all')}
       <section><h3>Student demographics</h3><dl class="detail-grid">${demographics.map(([label, value]) => `<div><dt>${label}</dt><dd>${score(value as number | null)}</dd></div>`).join('')}</dl><p class="detail-note">2024–25 NCES Common Core of Data.</p></section>
+      ${level === 'high' ? metricsPopup(school, 'subject') : ''}
     </div></details>
   </article>`;
 }
