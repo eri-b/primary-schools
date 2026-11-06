@@ -55,6 +55,7 @@ select {
 }
 
 .map-shell {
+  position: relative;
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr);
   height: 100dvh;
@@ -77,6 +78,60 @@ select {
   display: grid;
   gap: 12px;
   margin-top: 20px;
+}
+.control-panel-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.control-panel-content[hidden] {
+  display: none;
+}
+.school-map-header .brand-row {
+  padding-right: 28px;
+}
+.control-panel-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid #cbd7dd;
+  background: #fff;
+  color: #102a43;
+  cursor: pointer;
+}
+.control-panel-toggle:hover {
+  background: #e8eef1;
+}
+.control-panel-toggle:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.controls-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+.controls-collapsed .control-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  left: auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 16px;
+  border: 1px solid #cbd7dd;
+}
+.controls-collapsed .control-panel-toggle {
+  position: static;
+  flex-shrink: 0;
+}
+.control-panel-label {
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 .school-control {
   display: grid;

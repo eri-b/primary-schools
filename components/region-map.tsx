@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
-import { ChevronDown, MapPin, Search } from 'lucide-react';
+import { ChevronDown, MapPin, Minus, Search } from 'lucide-react';
 import { extraMetricOptions, getSchoolMetric, metricsPopup, type MeasuredSchool } from '@/lib/school-metrics';
 import { SchoolSectorFilter, matchesSchoolSector, type SchoolSector } from '@/components/school-sector-filter';
 import { Input } from '@/components/ui/input';
@@ -163,6 +163,7 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
   const [mapReady, setMapReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [boundaryError, setBoundaryError] = useState(false);
+  const [controlsCollapsed, setControlsCollapsed] = useState(false);
 
   const districtNames = useMemo(() => ['All districts', ...new Set(schools.filter((school) => county === 'All counties' || school.county === county).map((school) => school.district))].sort((a, b) => a === 'All districts' ? -1 : b === 'All districts' ? 1 : a.localeCompare(b)), [county, schools]);
   const countyNames = useMemo(() => ['All counties', ...new Set(schools.map((school) => school.county))], [schools]);
@@ -232,6 +233,13 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
   }, [config.center, config.zoom]);
 
   useEffect(() => {
+    if (!mapReady || !mapElementRef.current) return;
+    const observer = new ResizeObserver(() => mapRef.current?.invalidateSize({ pan: false }));
+    observer.observe(mapElementRef.current);
+    return () => observer.disconnect();
+  }, [mapReady]);
+
+  useEffect(() => {
     const L = leafletRef.current, map = mapRef.current;
     if (!mapReady || !L || !map) return;
     districtLayerRef.current?.remove();
@@ -288,8 +296,21 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
     }
   }, [breaks, county, district, schoolType, schoolSector, filteredSchools, mapReady, query, region, level, schools.length, effectiveMetric, dotLabel, dotScale, lowerIsBetter]);
 
-  return <main className="map-shell">
-    <aside className="control-panel">
+  return <main className={`map-shell${controlsCollapsed ? ' controls-collapsed' : ''}`}>
+    <aside className="control-panel" aria-label="Search and map controls">
+      {controlsCollapsed && <span className="control-panel-label">Search &amp; filters</span>}
+      <button
+        type="button"
+        className="control-panel-toggle"
+        aria-expanded={!controlsCollapsed}
+        aria-controls="map-controls"
+        aria-label={controlsCollapsed ? 'Expand search and filters' : 'Minimize search and filters'}
+        title={controlsCollapsed ? 'Expand search and filters' : 'Minimize search and filters'}
+        onClick={() => setControlsCollapsed((collapsed) => !collapsed)}
+      >
+        {controlsCollapsed ? <ChevronDown size={20} aria-hidden="true" /> : <Minus size={20} aria-hidden="true" />}
+      </button>
+      <div id="map-controls" className="control-panel-content" hidden={controlsCollapsed}>
       <SchoolMapHeader current={region} schoolYear="2024–25" level={level} />
       <p className="intro">Select a dot for school info. Numbered dots contain schools that share a location.</p>
       <div className="filters"><label htmlFor="region-search">School, city, county, or district</label><div className="search-wrap"><Search size={18} aria-hidden="true" /><Input id="region-search" type="search" placeholder={config.placeholder} value={query} onChange={(event) => setQuery(event.target.value)} className="h-11 rounded-none border-slate-300 bg-white pl-10 text-base shadow-none focus-visible:ring-2" /></div>
@@ -300,6 +321,7 @@ export function RegionMap({ region, level = 'elementary' }: { region: Region; le
       <fieldset className="layer-controls"><legend>Boundary layers</legend><label htmlFor="district-layer"><span><i className="line-key district-key" />School districts</span><input id="district-layer" className="layer-toggle" type="checkbox" role="switch" checked={showDistricts} aria-checked={showDistricts} onChange={(event) => setShowDistricts(event.target.checked)} disabled={!districts} /></label><p>District boundaries are generalized 2024–25 NCES data. Confirm a specific address with the district.</p>{boundaryError && <p className="boundary-error">District boundaries could not be loaded.</p>}</fieldset>
       <DotMetricLegend label={dotLabel} breaks={breaks} scale={dotScale} relative={relativeScale} lowerIsBetter={lowerIsBetter} />
       <DataSourcesFooter><p>{level === 'middle' && region === 'nyc' && <>Scores: <a href="https://infohub.nyced.org/reports/academics/test-results" target="_blank" rel="noopener noreferrer">NYCPS 2026 grades 6–8 ELA and math</a>. </>}{level === 'high' && region === 'nyc' && <>Outcomes: <a href="https://infohub.nyced.org/reports/academics/graduation-results" target="_blank" rel="noopener noreferrer">NYCPS class of 2025 four-year graduation</a> and Regents diploma rates. </>}{level !== 'elementary' && region !== 'nyc' && <>Additional outcomes and resource measures use official state reports; reporting periods and sources appear in school details. Missing or suppressed results remain unavailable. </>}{level === 'elementary' && (region === 'long-island' || region === 'hudson-valley') && <>Scores: <a href="https://data.nysed.gov/downloads.php" target="_blank" rel="noopener noreferrer">NYSED 2024–25 report cards</a>, combining published grades 3–5 counts. </>}{level === 'elementary' && region === 'new-jersey' && <>Scores: <a href="https://www.nj.gov/education/assessment/results/reports/2425/index.shtml" target="_blank" rel="noopener noreferrer">NJDOE 2024–25 NJSLA</a>, combining published grades 3–5 results. </>}{level === 'elementary' && region === 'connecticut' && <>Scores: <a href="https://data.ct.gov/Education/Next-Generation-Accountability-System/h28j-iix5" target="_blank" rel="noopener noreferrer">CSDE 2024–25 accountability data</a>, using the ELA and math performance index. This index is not a proficiency percentage. </>}{level === 'elementary' ? <>Enrollment, demographics, and locations: <a href="https://nces.ed.gov/opengis/rest/services/K12_School_Locations/EDGE_ADMINDATA_PUBLICSCH_2425/MapServer/1" target="_blank" rel="noopener noreferrer">NCES 2024–25</a>. </> : <>School grades, enrollment, and demographics: <a href="https://nces.ed.gov/ccd/files.asp" target="_blank" rel="noopener noreferrer">NCES CCD 2024–25</a>. Locations: <a href="https://nces.ed.gov/programs/edge/Geographic/SchoolLocations" target="_blank" rel="noopener noreferrer">NCES EDGE 2024–25</a>. </>}District boundaries: {region === 'hudson-valley' ? <>NCES 2024–25 and <a href="https://gisservices.its.ny.gov/arcgis/rest/services/NYS_Schools/MapServer/18" target="_blank" rel="noopener noreferrer">NYS GIS</a>.</> : region === 'westchester' ? <><a href="https://q-giswww.westchestergov.com/arcgis/rest/services/MappingWestchesterCounty/MapServer/87" target="_blank" rel="noopener noreferrer">Westchester County GIS</a>.</> : region === 'nyc' ? <>NYC Open Data.</> : <><a href="https://nces.ed.gov/opengis/rest/services/School_District_Boundaries/EDGE_ADMINDATA_SCHOOLDISTRICTS_SY2425/MapServer/1" target="_blank" rel="noopener noreferrer">NCES 2024–25</a>.</>}</p></DataSourcesFooter>
+      </div>
     </aside>
     <section className="map-stage" aria-label="Interactive school map">{loadError && <div className="map-message">School data could not be loaded.</div>}{!loadError && schools.length === 0 && <div className="map-message">Loading schools…</div>}{schools.length > 0 && filteredSchools.length === 0 && <div className="empty-message">No schools match those filters.</div>}<div ref={mapElementRef} className="map-canvas" role="application" aria-label={`Map of ${title}`} /></section>
   </main>;
