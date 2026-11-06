@@ -2,8 +2,6 @@
 
 Live production app: [schoolsampler.com](https://schoolsampler.com).
 
-Autodeploy test: November 5, 2026.
-
 Interactive Leaflet maps of public elementary, middle, and high schools in New York City, Westchester, Long Island, Dutchess, Orange, Putnam, Rockland, Sullivan, Ulster, and nearby New Jersey and Connecticut. They include school search, district boundaries, and clickable school details. All school levels show available state assessment, attendance, graduation, and spending measures.
 
 Use **Filters → Public school sector** to show all public schools, charter schools only, or public schools excluding charters. Charter status comes from the 2024–25 NCES CCD directory, matched by NCES school ID. The NYC elementary dataset contains only NYCPS district schools; its charter-only view explains that coverage gap. Unknown charter status is included only in the all-schools view. Data builders retain this field on refresh. To update charter status in the existing JSON without rebuilding scores, run `python3 scripts/add_school_sectors.py --source-dir /path/to/nces-archives` (the directory may contain `ccd-directory.zip`, otherwise it is downloaded).
