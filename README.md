@@ -116,3 +116,5 @@ For an offline/reproducible refresh, pass a directory containing `demographics.x
 ```bash
 python3 scripts/build_schools_json.py --source-dir /path/to/source-files
 ```
+
+Temporary text for autodeploy testing.
