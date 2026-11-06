@@ -106,12 +106,10 @@ select {
 }
 .brand-mark {
   display: grid;
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   place-items: center;
   flex: 0 0 auto;
-  background: #102a43;
-  color: #ffffff;
 }
 .eyebrow {
   margin: 0 0 3px;
@@ -942,8 +940,8 @@ h1 {
     box-shadow: 0 12px 32px rgb(16 42 67 / 16%);
   }
   .brand-mark {
-    width: 38px;
-    height: 38px;
+    width: 32px;
+    height: 32px;
   }
   h1 {
     font-size: 1.12rem;

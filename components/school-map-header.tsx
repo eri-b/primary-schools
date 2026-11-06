@@ -1,6 +1,6 @@
 'use client';
 
-import { GraduationCap } from 'lucide-react';
+import Image from 'next/image';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 
 const locations = [
@@ -19,7 +19,7 @@ export function SchoolMapHeader({ current, schoolYear, level = 'elementary' }: {
   return (
     <header className="school-map-header">
       <div className="brand-row">
-        <span className="brand-mark" aria-hidden="true"><GraduationCap size={22} strokeWidth={2.2} /></span>
+        <span className="brand-mark" aria-hidden="true"><Image src="/school-icon.png" alt="" width={32} height={32} unoptimized /></span>
         <div>
           <p className="eyebrow">{schoolYear} school year</p>
           <h1>NYC Metro schools</h1>

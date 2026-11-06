@@ -14,6 +14,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'School Sampler',
+  icons: {
+    icon: { url: '/school-icon.png', type: 'image/png' },
+    apple: '/school-icon.png',
+  },
   description: 'Explore public elementary, middle, and high schools across New York City, Westchester, Long Island, the Hudson Valley, New Jersey, and Connecticut.',
 };
 
