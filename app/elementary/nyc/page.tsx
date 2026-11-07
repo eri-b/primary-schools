@@ -8,6 +8,7 @@ import { extraMetricOptions, getSchoolMetric, metricsPopup, type MeasuredSchool 
 import { SchoolSectorFilter, matchesSchoolSector, type SchoolSector } from '@/components/school-sector-filter';
 import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
+import { MapControlPanel } from '@/components/map-control-panel';
 import { SchoolMapHeader } from '@/components/school-map-header';
 import { DotMetricLegend } from '@/components/dot-metric-legend';
 import { metricBreaks, metricColor, metricText, type MetricScale } from '@/lib/map-metrics';
@@ -462,6 +463,13 @@ export default function Home() {
     Number(only3K);
 
   useEffect(() => {
+    if (!mapReady || !mapElementRef.current) return;
+    const observer = new ResizeObserver(() => mapRef.current?.invalidateSize({ pan: false }));
+    observer.observe(mapElementRef.current);
+    return () => observer.disconnect();
+  }, [mapReady]);
+
+  useEffect(() => {
     let cancelled = false;
     fetch('/schools.json')
       .then((response) => {
@@ -666,7 +674,7 @@ export default function Home() {
 
   return (
     <main className="map-shell">
-      <aside className="control-panel">
+      <MapControlPanel>
         <SchoolMapHeader current="nyc" schoolYear="2025–26" />
 
         <p className="intro">Select a dot for school info.</p>
@@ -811,7 +819,7 @@ export default function Home() {
             2024–25 and should be confirmed by address with NYCPS.
           </p>
         </DataSourcesFooter>
-      </aside>
+      </MapControlPanel>
 
       <section className="map-stage" aria-label="Interactive school map">
         {loadError && (

@@ -69,15 +69,15 @@ select {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 30px 28px 22px;
+  padding: 22px 22px 18px;
   border-right: 1px solid #cbd7dd;
   background: #f8fafb;
   box-shadow: 8px 0 28px rgb(16 42 67 / 8%);
 }
 .school-controls {
   display: grid;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 10px;
+  margin-top: 14px;
 }
 .control-panel-content {
   display: flex;
@@ -96,8 +96,8 @@ select {
   right: 8px;
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: 1px solid #cbd7dd;
   background: #fff;
@@ -111,10 +111,10 @@ select {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-.controls-collapsed {
+.map-shell:has(.control-panel[data-collapsed='true']) {
   grid-template-columns: minmax(0, 1fr);
 }
-.controls-collapsed .control-panel {
+.control-panel[data-collapsed='true'] {
   position: absolute;
   top: 12px;
   right: 12px;
@@ -125,7 +125,7 @@ select {
   padding: 8px 8px 8px 16px;
   border: 1px solid #cbd7dd;
 }
-.controls-collapsed .control-panel-toggle {
+.control-panel[data-collapsed='true'] .control-panel-toggle {
   position: static;
   flex-shrink: 0;
 }
@@ -135,29 +135,29 @@ select {
 }
 .school-control {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 .school-control label {
   color: #334e68;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 750;
 }
 .school-control-select {
   width: 100%;
 }
 .school-control-select select {
-  height: 42px;
+  height: 38px;
   border-color: #cbd7dd;
   border-radius: 0;
   background: #fff;
   color: #102a43;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
 }
 .brand-row {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 10px;
 }
 .brand-mark {
   display: grid;
@@ -169,35 +169,35 @@ select {
 .eyebrow {
   margin: 0 0 3px;
   color: #6a7e8c;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   line-height: 1.15;
   letter-spacing: -0.025em;
 }
 .intro {
-  margin: 24px 0 26px;
+  margin: 16px 0 18px;
   color: #486273;
-  font-size: 1rem;
-  line-height: 1.55;
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 .filters {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 .filters label {
-  margin-top: 7px;
-  font-size: 0.82rem;
+  margin-top: 4px;
+  font-size: 0.78rem;
   font-weight: 750;
   letter-spacing: 0.01em;
 }
 .filter-section {
-  margin: 18px 0 0;
+  margin: 12px 0 0;
   border: 1px solid #cbd7dd;
   background: #f7f9fa;
 }
@@ -205,9 +205,9 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 13px 14px;
+  padding: 10px 12px;
   color: #102a43;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -227,11 +227,11 @@ h1 {
 .filter-grid,
 .filter-control {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 .filter-grid {
-  gap: 12px;
-  padding: 0 14px 14px;
+  gap: 10px;
+  padding: 0 12px 12px;
 }
 .filter-control label {
   margin-top: 0;
@@ -261,42 +261,46 @@ h1 {
   color: #657b88;
 }
 .filters [data-slot='native-select'] {
-  height: 44px;
+  height: 38px;
   border-radius: 0;
   border-color: #c0cdd4;
   background: #ffffff;
   padding-left: 12px;
-  font-size: 1rem;
+  font-size: 0.9rem;
+}
+.control-panel .search-wrap input {
+  height: 38px;
+  font-size: 0.9rem;
 }
 .result-count {
   display: flex;
   align-items: center;
   gap: 7px;
-  margin-top: 24px;
-  padding: 14px 0;
+  margin-top: 16px;
+  padding: 10px 0;
   border-top: 1px solid #d6e0e5;
   border-bottom: 1px solid #d6e0e5;
   color: #496273;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
 }
 .result-count svg {
   color: #d07e0e;
 }
 .result-count strong {
   color: #102a43;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
 }
 .layer-controls {
   display: grid;
-  gap: 11px;
-  margin: 20px 0 0;
+  gap: 8px;
+  margin: 14px 0 0;
   padding: 0;
   border: 0;
 }
 .layer-controls legend {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   color: #102a43;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 750;
 }
 .layer-controls label {
@@ -305,7 +309,7 @@ h1 {
   justify-content: space-between;
   gap: 14px;
   color: #365466;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   cursor: pointer;
 }
 .layer-controls label > span {
@@ -373,24 +377,24 @@ h1 {
   border-top-color: #c47c14;
 }
 .legend {
-  margin-top: 21px;
+  margin-top: 14px;
   display: grid;
-  gap: 9px;
+  gap: 6px;
   color: #496273;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
 }
 .dot-metric-control {
   display: grid;
-  gap: 8px;
-  margin-top: 20px;
+  gap: 6px;
+  margin-top: 14px;
 }
 .dot-metric-control label {
   color: #102a43;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 750;
 }
 .dot-metric-control [data-slot='native-select'] {
-  height: 44px;
+  height: 38px;
   border-radius: 0;
   background: #fff;
 }
@@ -408,7 +412,7 @@ h1 {
 .legend p {
   margin: 0 0 2px;
   color: #102a43;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 750;
 }
 .legend div {
@@ -443,7 +447,7 @@ h1 {
   align-items: center;
   gap: 8px;
   margin-top: auto;
-  padding-top: 22px;
+  padding-top: 16px;
   color: #5f7786;
   font-size: 0.73rem;
 }
@@ -990,16 +994,20 @@ h1 {
     left: 12px;
     min-height: 0;
     max-height: calc(100svh - 24px);
-    padding: 16px;
+    padding: 12px;
     border: 1px solid #cbd7dd;
     box-shadow: 0 12px 32px rgb(16 42 67 / 16%);
+  }
+  .control-panel [data-slot='native-select'],
+  .control-panel .search-wrap input {
+    font-size: 1rem;
   }
   .brand-mark {
     width: 32px;
     height: 32px;
   }
   h1 {
-    font-size: 1.12rem;
+    font-size: 1.05rem;
   }
   .eyebrow {
     font-size: 0.66rem;
@@ -1013,7 +1021,7 @@ h1 {
   }
   .filters {
     gap: 0;
-    margin-top: 14px;
+    margin-top: 10px;
   }
   .filters > label,
   .filter-control label {

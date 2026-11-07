@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { DataSourcesFooter } from '@/components/data-sources-footer';
 import { DotMetricLegend } from '@/components/dot-metric-legend';
 import { metricBreaks, metricColor, metricText, type MetricScale } from '@/lib/map-metrics';
+import { MapControlPanel } from '@/components/map-control-panel';
 import { SchoolMapHeader } from '@/components/school-map-header';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 
@@ -122,6 +123,13 @@ export default function WestchesterElementary() {
   const filteredSchools = baseFilteredSchools;
 
   useEffect(() => {
+    if (!mapReady || !mapElementRef.current) return;
+    const observer = new ResizeObserver(() => mapRef.current?.invalidateSize({ pan: false }));
+    observer.observe(mapElementRef.current);
+    return () => observer.disconnect();
+  }, [mapReady]);
+
+  useEffect(() => {
     let cancelled = false;
     fetch('/westchester-schools.json').then((response) => {
       if (!response.ok) throw new Error('Schools unavailable');
@@ -220,7 +228,7 @@ export default function WestchesterElementary() {
   }, [filteredSchools, mapReady, query, schools.length, dotMetric, breaks, lowerIsBetter, dotLabel, dotScale]);
 
   return <main className="map-shell">
-    <aside className="control-panel">
+    <MapControlPanel>
       <SchoolMapHeader current="westchester" schoolYear="2024–25" />
       <p className="intro">Select a dot for school info.</p>
       <div className="filters"><label htmlFor="westchester-search">School, city, or district</label><div className="search-wrap"><Search size={18} aria-hidden="true" /><Input id="westchester-search" type="search" placeholder="Try Scarsdale or Concord Road" value={query} onChange={(event) => setQuery(event.target.value)} className="h-11 rounded-none border-slate-300 bg-white pl-10 text-base shadow-none focus-visible:ring-2" /></div>
@@ -231,7 +239,7 @@ export default function WestchesterElementary() {
       <fieldset className="layer-controls"><legend>Boundary layers</legend><label htmlFor="westchester-district-layer"><span><i className="line-key district-key" />School districts</span><input id="westchester-district-layer" className="layer-toggle" type="checkbox" role="switch" checked={showDistricts} aria-checked={showDistricts} onChange={(event) => setShowDistricts(event.target.checked)} disabled={!districts} /></label><label htmlFor="westchester-zone-layer"><span><i className="line-key zone-key" />Historic elementary zones</span><input id="westchester-zone-layer" className="layer-toggle" type="checkbox" role="switch" checked={showZones} aria-checked={showZones} onChange={(event) => setShowZones(event.target.checked)} disabled={!zones} /></label><p>Zones cover some schools and date to 2015–16. They may have changed. Confirm current school assignment by address with the district. County district boundaries are approximate.</p>{boundaryError && <p className="boundary-error">Some boundary data could not be loaded.</p>}</fieldset>
       <DotMetricLegend label={dotLabel} breaks={breaks} scale={dotScale} relative={Boolean(selectedExtra)} lowerIsBetter={lowerIsBetter} />
       <DataSourcesFooter><p>Scores: <a href="https://data.nysed.gov/downloads.php" target="_blank" rel="noopener noreferrer">NYSED 2024–25 report cards</a>, combining published grades 3–5 counts. Enrollment, demographics, and locations: <a href="https://nces.ed.gov/opengis/rest/services/K12_School_Locations/EDGE_ADMINDATA_PUBLICSCH_2425/MapServer/1" target="_blank" rel="noopener noreferrer">NCES 2024–25</a>. Districts: <a href="https://q-giswww.westchestergov.com/arcgis/rest/services/MappingWestchesterCounty/MapServer/87" target="_blank" rel="noopener noreferrer">Westchester County GIS</a>. Historical zones: <a href="https://nces.ed.gov/programs/edge/SABS" target="_blank" rel="noopener noreferrer">NCES 2015–16 survey</a>.</p></DataSourcesFooter>
-    </aside>
+    </MapControlPanel>
     <section className="map-stage" aria-label="Interactive school map">{loadError && <div className="map-message">School data could not be loaded.</div>}{!loadError && schools.length === 0 && <div className="map-message">Loading schools…</div>}{schools.length > 0 && filteredSchools.length === 0 && <div className="empty-message">No schools match those filters.</div>}<div ref={mapElementRef} className="map-canvas" role="application" aria-label="Map of Westchester County public elementary schools" /></section>
   </main>;
 }
